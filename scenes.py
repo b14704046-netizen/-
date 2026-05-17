@@ -1,5 +1,6 @@
 """Scenes - city overworld + all building interiors."""
 import pygame
+import math
 import random
 import config
 from entities import NPC
@@ -49,46 +50,46 @@ SC = 39  # screen wall
 SOLID = {W, D, B, FT, BN, LP, SH, PD, CF, TV, SK, CH, TB, BK, TR, FN, CN, CB, TM, SG, SC}
 
 TILE_COLOR = {
-    F:   (175, 155, 135),
-    W:   (72,  62,  82),
-    R:   (50,  50,  60),
-    G:   (60,  140, 60),
-    D:   (145, 105, 65),
-    T:   (15,  75,  115),
-    B:   (95,  135, 195),
-    S:   (145, 135, 125),
-    C:   (140, 90,  110),
-    DR:  (180, 130, 70),
-    TR:  (40,  100, 50),
-    FT:  (90,  170, 200),
-    BN:  (110, 70,  50),
-    LP:  (90,  90,  100),
-    SH:  (160, 130, 90),
-    PD:  (140, 100, 60),
-    CF:  (60,  40,  30),
-    TV:  (40,  40,  50),
-    SK:  (200, 200, 210),
-    CH:  (130, 90,  60),
-    TB:  (155, 110, 70),
-    PG:  (200, 200, 150),
-    FL:  (90,  160, 90),
-    WD:  (175, 130, 90),
-    TI:  (200, 200, 200),
-    ST:  (130, 130, 140),
-    BK:  (110, 70,  40),
-    RG:  (170, 70,  90),
-    TR2: (140, 100, 60),
-    WIN: (140, 180, 200),
-    CR:  (220, 220, 220),
-    PV:  (170, 160, 150),
-    CB:  (130, 110, 80),
-    TM:  (60,  60,  70),
-    SG:  (200, 180, 60),
-    FN:  (130, 130, 140),
-    CN:  (230, 220, 200),
-    MR:  (220, 220, 210),
-    RP:  (140, 30,  40),
-    SC:  (30,  60,  100),
+    F:   (182, 160, 138),
+    W:   (58,  50,  72),
+    R:   (42,  44,  54),
+    G:   (55,  145, 58),
+    D:   (148, 108, 66),
+    T:   (12,  68,  108),
+    B:   (88,  128, 192),
+    S:   (152, 142, 130),
+    C:   (142, 88,  108),
+    DR:  (188, 138, 72),
+    TR:  (36,  98,  44),
+    FT:  (72,  158, 198),
+    BN:  (112, 72,  50),
+    LP:  (78,  78,  95),
+    SH:  (158, 128, 88),
+    PD:  (142, 100, 60),
+    CF:  (52,  34,  24),
+    TV:  (32,  32,  45),
+    SK:  (205, 205, 215),
+    CH:  (128, 88,  58),
+    TB:  (152, 108, 68),
+    PG:  (195, 195, 145),
+    FL:  (55,  152, 62),
+    WD:  (172, 128, 86),
+    TI:  (198, 198, 205),
+    ST:  (128, 128, 140),
+    BK:  (105, 68,  38),
+    RG:  (168, 62,  88),
+    TR2: (138, 98,  58),
+    WIN: (130, 178, 210),
+    CR:  (215, 215, 218),
+    PV:  (168, 158, 148),
+    CB:  (128, 108, 78),
+    TM:  (55,  55,  68),
+    SG:  (205, 185, 55),
+    FN:  (128, 128, 140),
+    CN:  (235, 225, 205),
+    MR:  (225, 222, 215),
+    RP:  (148, 28,  38),
+    SC:  (24,  55,  105),
 }
 
 
@@ -164,7 +165,8 @@ def _build_city():
             m[y][x] = G
     # Trees in park
     for tx, ty in [(28,13), (30,12), (33,12), (35,13), (28,16), (35,16),
-                    (28,20), (30,21), (33,21), (35,20), (31,16), (32,18)]:
+                    (28,20), (30,21), (33,21), (35,20), (31,16), (32,18),
+                    (29,15), (34,14), (30,19), (36,17)]:
         m[ty][tx] = TR
     # Fountain
     m[17][31] = FT
@@ -180,6 +182,10 @@ def _build_city():
     m[16][30] = PG
     m[19][33] = PG
     m[14][32] = PG
+    m[21][31] = PG
+    # Flowers along park path
+    for tx, ty in [(28,17), (29,18), (33,16), (34,19), (31,14), (32,21)]:
+        m[ty][tx] = FL
 
     # Trees/flowers on grass borders
     for x in range(0, cols):
@@ -190,12 +196,19 @@ def _build_city():
                 elif random.random() < 0.06:
                     m[y][x] = FL
 
-    # Lampposts along road
-    for x in range(2, cols, 6):
+    # Lampposts along road (denser for atmosphere)
+    for x in range(2, cols, 5):
         if m[7][x] == S: m[7][x] = LP
         if m[11][x] == S: m[11][x] = LP
         if m[23][x] == S: m[23][x] = LP
         if m[27][x] == S: m[27][x] = LP
+
+    # Bus stops (bench + sign) on sidewalks
+    for bx, by in [(8, 7), (20, 11), (38, 27), (12, 23)]:
+        if m[by][bx] == S:
+            m[by][bx] = BN
+        if 0 <= bx+1 < cols and m[by][bx+1] == S:
+            m[by][bx+1] = SG
 
     # Sign markers near doors
     signs = {
@@ -246,10 +259,13 @@ def _build_apartment():
     m[3][16] = TB; m[3][17] = TB
     # Bookshelf
     m[2][6] = BK; m[2][7] = BK
-    # Rug
+    # Rug in living area
     for x in range(9, 14):
         for y in range(7, 11):
             m[y][x] = RG
+    # Plant/flowers in corners
+    m[12][2] = FL
+    m[12][17] = FL
     # Window walls
     m[0][5] = WIN; m[0][10] = WIN; m[0][15] = WIN
 
@@ -589,11 +605,24 @@ def draw_scene(surf, scene, cx, cy, economy, fnt_s):
     for ty in range(y0, y1):
         for tx in range(x0, x1):
             tile = scene.tiles[ty][tx]
-            base = TILE_COLOR.get(tile, (80,80,80))
+            base = TILE_COLOR.get(tile, (80, 80, 80))
             sx, sy = tx * ts - int(cx), ty * ts - int(cy)
-            r = pygame.Rect(sx, sy, ts, ts)
-            pygame.draw.rect(surf, base, r)
-            _decorate(surf, sx, sy, ts, tile, fnt_s, economy)
+            pygame.draw.rect(surf, base, pygame.Rect(sx, sy, ts, ts))
+            _decorate(surf, sx, sy, ts, tile, tx, ty, fnt_s, economy)
+
+    if scene.name == config.SCENE_CITY:
+        _draw_city_ambience(surf, scene, cx, cy)
+
+    # Door sparkle hint on city map
+    if scene.name == config.SCENE_CITY:
+        t_ms = pygame.time.get_ticks()
+        pulse = int(180 + 60 * math.sin(t_ms / 400.0))
+        for door in scene.doors:
+            dsx = door["x"] * ts - int(cx)
+            dsy = door["y"] * ts - int(cy)
+            if -ts < dsx < config.SCREEN_W + ts:
+                pygame.draw.rect(surf, (pulse, pulse//2, 0),
+                                 pygame.Rect(dsx, dsy, ts, ts), 2)
 
     # Overlay text for city signs
     if scene.name == config.SCENE_CITY:
@@ -609,16 +638,58 @@ def draw_scene(surf, scene, cx, cy, economy, fnt_s):
     # Show inflation-driven price tags in supermarket
     if scene.name == config.SCENE_SUPERMARKET:
         cpi = economy.cpi
+        sold_out_axes = []
+        if cpi > 7:
+            sold_out_axes = [3, 11]   # 蛋跟油缺貨
+        if cpi > 9:
+            sold_out_axes = [3, 7, 11, 15]  # 全面缺貨
         for ax in [3, 7, 11, 15]:
             base_prices = {3: 5, 7: 4, 11: 8, 15: 12}
             price = int(base_prices[ax] * (1 + cpi / 5))
             sx, sy = ax * ts - int(cx), 2 * ts - int(cy) - 18
-            col = config.RED if cpi > 6 else config.YELLOW if cpi > 3 else config.GREEN
-            t = fnt_s.render(f"${price}", True, col)
-            bg = pygame.Surface((t.get_width()+8, t.get_height()+4), pygame.SRCALPHA)
-            bg.fill((0,0,0,180))
-            surf.blit(bg, (sx, sy))
-            surf.blit(t, (sx+4, sy+2))
+            if ax in sold_out_axes:
+                # 缺貨標示（閃爍紅字）
+                if (pygame.time.get_ticks() // 500) % 2 == 0:
+                    out_t = fnt_s.render("缺貨！", True, config.RED)
+                    bg = pygame.Surface((out_t.get_width()+8, out_t.get_height()+4), pygame.SRCALPHA)
+                    bg.fill((80, 0, 0, 200))
+                    surf.blit(bg, (sx, sy))
+                    surf.blit(out_t, (sx+4, sy+2))
+            else:
+                col = config.RED if cpi > 6 else config.YELLOW if cpi > 3 else config.GREEN
+                t = fnt_s.render(f"${price}", True, col)
+                bg = pygame.Surface((t.get_width()+8, t.get_height()+4), pygame.SRCALPHA)
+                bg.fill((0,0,0,180))
+                surf.blit(bg, (sx, sy))
+                surf.blit(t, (sx+4, sy+2))
+
+    # 城市蕭條視覺：失業高時部分建築燈光熄滅、貼封店告示
+    if scene.name == config.SCENE_CITY and economy.unemployment > 8:
+        severity = min(1.0, (economy.unemployment - 8) / 6.0)
+        closed_buildings = [
+            (1, 1, 10, 7),   # 公寓附近店家
+            (38, 1, 48, 7),  # 健身房
+        ]
+        if severity > 0.5:
+            closed_buildings.append((12, 1, 21, 7))  # 咖啡廳
+        for x0, y0, x1, y1 in closed_buildings:
+            bx_s = x0 * ts - int(cx)
+            by_s = y0 * ts - int(cy)
+            bw_s = (x1 - x0) * ts
+            bh_s = (y1 - y0) * ts
+            if -bw_s < bx_s < config.SCREEN_W:
+                dark = pygame.Surface((bw_s, bh_s), pygame.SRCALPHA)
+                dark.fill((0, 0, 0, int(severity * 100)))
+                surf.blit(dark, (bx_s, by_s))
+                # 封店標示
+                label_t = fnt_s.render("CLOSED", True, (180, 60, 60))
+                lx = bx_s + bw_s // 2 - label_t.get_width() // 2
+                ly = by_s + bh_s // 2 - label_t.get_height() // 2
+                pygame.draw.rect(surf, (40, 0, 0),
+                                 pygame.Rect(lx - 4, ly - 2,
+                                             label_t.get_width() + 8,
+                                             label_t.get_height() + 4))
+                surf.blit(label_t, (lx, ly))
 
     # Wall St ticker
     if scene.name == config.SCENE_WALL_ST:
@@ -639,108 +710,273 @@ def draw_scene(surf, scene, cx, cy, economy, fnt_s):
         surf.blit(t, (sx + 30, sy + 10))
 
 
-def _decorate(surf, sx, sy, ts, tile, fnt_s, economy):
+def _draw_city_ambience(surf, scene, cx, cy):
+    """Animated cars and ambient life on the city map."""
+    ts = config.TILE_SIZE
+    t_ms = pygame.time.get_ticks()
+    road_w = scene.cols * ts
+    road_h = scene.rows * ts
+
+    # Horizontal road cars: (road_y_tile, color, speed px/ms, phase 0-1, direction +1/-1)
+    h_cars = [
+        (9,  (185, 52, 52),  0.050, 0.00,  1),
+        (9,  (52, 52, 188),  0.038, 0.55, -1),
+        (9,  (52, 178, 52),  0.060, 0.28,  1),
+        (25, (225, 122, 40), 0.044, 0.12,  1),
+        (25, (178, 52, 178), 0.048, 0.72, -1),
+        (25, (178, 178, 52), 0.036, 0.62,  1),
+    ]
+    for (road_ty, color, speed, phase, direction) in h_cars:
+        cw, ch = 38, 22
+        travel = int((t_ms * speed + phase * road_w) * direction) % road_w
+        if direction < 0:
+            travel = road_w - (int((t_ms * speed + phase * road_w)) % road_w)
+        lane_off = (ts // 4) if direction > 0 else (ts // 2 + 4)
+        car_x = travel - int(cx)
+        car_y = road_ty * ts - int(cy) + lane_off - ch // 2
+        if -cw < car_x < config.SCREEN_W + cw:
+            pygame.draw.rect(surf, color, pygame.Rect(car_x, car_y, cw, ch), border_radius=4)
+            wind_x = (car_x + cw - 14) if direction > 0 else (car_x + 2)
+            pygame.draw.rect(surf, (155, 212, 242),
+                             pygame.Rect(wind_x, car_y + 3, 12, 10), border_radius=2)
+            pygame.draw.circle(surf, (28, 28, 28), (car_x + 7, car_y + ch - 1), 4)
+            pygame.draw.circle(surf, (28, 28, 28), (car_x + cw - 7, car_y + ch - 1), 4)
+            # Headlights / tail-lights
+            light_col = (255, 245, 180) if direction > 0 else (255, 60, 60)
+            light_x = (car_x + cw - 3) if direction > 0 else (car_x + 1)
+            pygame.draw.circle(surf, light_col, (light_x, car_y + 5), 2)
+            pygame.draw.circle(surf, light_col, (light_x, car_y + ch - 5), 2)
+
+    # Vertical road cars: (road_x_tile, color, speed, phase, direction)
+    v_cars = [
+        (24, (62, 182, 182), 0.042, 0.20,  1),
+        (24, (202, 102, 62), 0.036, 0.78, -1),
+    ]
+    for (road_tx, color, speed, phase, direction) in v_cars:
+        cw, ch = 22, 38
+        travel = int((t_ms * speed + phase * road_h) * direction) % road_h
+        if direction < 0:
+            travel = road_h - (int((t_ms * speed + phase * road_h)) % road_h)
+        lane_off = (ts // 4) if direction > 0 else (ts // 2 + 4)
+        car_x = road_tx * ts - int(cx) + lane_off - cw // 2
+        car_y = travel - int(cy)
+        if -ch < car_y < config.SCREEN_H + ch:
+            pygame.draw.rect(surf, color, pygame.Rect(car_x, car_y, cw, ch), border_radius=4)
+            wind_y = (car_y + ch - 14) if direction > 0 else (car_y + 2)
+            pygame.draw.rect(surf, (155, 212, 242),
+                             pygame.Rect(car_x + 3, wind_y, 14, 12), border_radius=2)
+            pygame.draw.circle(surf, (28, 28, 28), (car_x + cw // 2, car_y + 5), 4)
+            pygame.draw.circle(surf, (28, 28, 28), (car_x + cw // 2, car_y + ch - 5), 4)
+
+
+def _decorate(surf, sx, sy, ts, tile, tx, ty, fnt_s, economy):
+    h = (tx * 2654435761 + ty * 2246822519) & 0xFFFF
+    t_ms = pygame.time.get_ticks()
+
     if tile == W:
-        pygame.draw.line(surf, (55,48,65), (sx, sy+ts//2), (sx+ts, sy+ts//2), 1)
-        pygame.draw.line(surf, (55,48,65), (sx+ts//2, sy), (sx+ts//2, sy+ts), 1)
+        pygame.draw.line(surf, (48, 40, 60), (sx, sy+ts//2), (sx+ts, sy+ts//2), 1)
+        pygame.draw.line(surf, (48, 40, 60), (sx+ts//2, sy), (sx+ts//2, sy+ts), 1)
+    elif tile == G:
+        # Grass variation tufts
+        for i in range(4):
+            gx = sx + ((h + i * 41) % (ts - 6)) + 3
+            gy = sy + ((h + i * 67) % (ts - 6)) + 3
+            v = ((h + i * 29) % 24) - 12
+            gc = (max(38, min(90, 48 + v)), max(110, min(185, 148 + v)), max(38, min(75, 52 + v)))
+            pygame.draw.circle(surf, gc, (gx, gy), 2)
+    elif tile == R:
+        # Dashed center lane marking
+        dash_period = 24
+        # Horizontal road rows have y=8,9,10 (9 is center) or 24,25,26
+        if (ty % 16 in (8, 9, 10, 24, 25, 26)) or True:
+            phase = (tx * ts) % (dash_period * 2)
+            if phase < dash_period:
+                pygame.draw.line(surf, (200, 195, 80),
+                                 (sx, sy + ts//2), (sx + ts, sy + ts//2), 1)
+        # Asphalt grain
+        for i in range(2):
+            ax = sx + ((h + i * 53) % (ts - 2)) + 1
+            ay = sy + ((h + i * 71) % (ts - 2)) + 1
+            pygame.draw.circle(surf, (38, 40, 50), (ax, ay), 1)
+    elif tile == S:
+        # Sidewalk stone joint lines
+        mid = ts // 2
+        pygame.draw.line(surf, (132, 124, 112), (sx + mid, sy + 2), (sx + mid, sy + ts - 2), 1)
+        pygame.draw.line(surf, (132, 124, 112), (sx + 2, sy + mid), (sx + ts - 2, sy + mid), 1)
+    elif tile == WD:
+        # Wood grain lines
+        for i in range(3):
+            gy = sy + (i * ts // 3 + (ty * 7 + tx * 3) % (ts // 3))
+            pygame.draw.line(surf, (155, 112, 72), (sx, gy), (sx + ts, gy), 1)
+        pygame.draw.line(surf, (162, 120, 78), (sx, sy + ts - 1), (sx + ts, sy + ts - 1), 1)
+    elif tile == TI:
+        # Grout lines
+        pygame.draw.line(surf, (178, 178, 185), (sx, sy + ts//2), (sx + ts, sy + ts//2), 1)
+        pygame.draw.line(surf, (178, 178, 185), (sx + ts//2, sy), (sx + ts//2, sy + ts), 1)
+    elif tile == MR:
+        # Marble veining
+        vx1 = sx + (h % (ts // 2))
+        vy2 = sy + ((h >> 4) % ts)
+        pygame.draw.line(surf, (205, 200, 192), (vx1, sy), (sx + ts, vy2), 1)
+        vx2 = sx + ((h >> 8) % (ts // 2)) + ts // 2
+        pygame.draw.line(surf, (210, 205, 198), (sx, sy + (h >> 12) % ts), (vx2, sy + ts), 1)
     elif tile == DR:
-        pygame.draw.rect(surf, (140, 100, 50), pygame.Rect(sx+8, sy+4, ts-16, ts-8), border_radius=4)
-        pygame.draw.circle(surf, (255,220,80), (sx+ts-14, sy+ts//2), 3)
+        pygame.draw.rect(surf, (148, 108, 52), pygame.Rect(sx+6, sy+4, ts-12, ts-8), border_radius=4)
+        hw = (ts - 16) // 2
+        pygame.draw.rect(surf, (120, 85, 38), pygame.Rect(sx+8, sy+6, hw-1, (ts-14)//2), border_radius=2)
+        pygame.draw.rect(surf, (120, 85, 38), pygame.Rect(sx+8+hw+1, sy+6, hw-1, (ts-14)//2), border_radius=2)
+        pygame.draw.circle(surf, (255, 220, 80), (sx + ts - 14, sy + ts//2), 3)
     elif tile == T:
         pygame.draw.rect(surf, config.TERMINAL_BG, pygame.Rect(sx+4, sy+4, ts-9, ts-9), border_radius=3)
         pygame.draw.rect(surf, config.TERMINAL_GREEN, pygame.Rect(sx+4, sy+4, ts-9, ts-9), border_radius=3, width=1)
-        t = fnt_s.render("PC", True, config.TERMINAL_GREEN)
-        surf.blit(t, (sx+(ts-t.get_width())//2, sy+(ts-t.get_height())//2))
+        t_surf = fnt_s.render("PC", True, config.TERMINAL_GREEN)
+        surf.blit(t_surf, (sx + (ts - t_surf.get_width())//2, sy + (ts - t_surf.get_height())//2))
     elif tile == B:
-        pygame.draw.rect(surf, (75,115,180), pygame.Rect(sx+2, sy+2, ts-5, ts-5), border_radius=5)
-        pygame.draw.rect(surf, (200,205,220), pygame.Rect(sx+3, sy+3, ts-7, 12))
+        pygame.draw.rect(surf, (72, 112, 182), pygame.Rect(sx+2, sy+2, ts-5, ts-5), border_radius=5)
+        pygame.draw.rect(surf, (205, 210, 225), pygame.Rect(sx+3, sy+3, ts-7, 12))
+        pygame.draw.ellipse(surf, (235, 238, 255), pygame.Rect(sx+5, sy+4, 20, 10))
     elif tile == TR:
-        pygame.draw.rect(surf, (80, 55, 30), pygame.Rect(sx+ts//2-3, sy+ts-16, 6, 16))
-        pygame.draw.circle(surf, (40, 110, 50), (sx+ts//2, sy+ts//2-2), ts//2-4)
-        pygame.draw.circle(surf, (30, 90, 40), (sx+ts//2, sy+ts//2-2), ts//2-8, 2)
+        # Layered foliage + trunk shadow
+        pygame.draw.ellipse(surf, (25, 25, 28), pygame.Rect(sx + ts//2 - 10, sy + ts - 9, 20, 7))
+        pygame.draw.rect(surf, (72, 48, 24), pygame.Rect(sx+ts//2-3, sy+ts-18, 6, 18))
+        pygame.draw.circle(surf, (32, 95, 40), (sx+ts//2, sy+ts//2-2), ts//2-3)
+        pygame.draw.circle(surf, (42, 118, 52), (sx+ts//2-3, sy+ts//2-6), ts//2-9)
+        pygame.draw.circle(surf, (55, 138, 65), (sx+ts//2+2, sy+ts//2-9), ts//2-14)
+        pygame.draw.circle(surf, (72, 162, 80), (sx+ts//2-4, sy+ts//2-10), 5)
     elif tile == FT:
-        pygame.draw.circle(surf, (60, 140, 180), (sx+ts//2, sy+ts//2), ts//2-4)
-        pygame.draw.circle(surf, (200, 230, 255), (sx+ts//2, sy+ts//2), ts//4)
+        anim = t_ms / 700.0
+        pygame.draw.circle(surf, (52, 130, 178), (sx+ts//2, sy+ts//2), ts//2-3)
+        pygame.draw.circle(surf, (190, 228, 252), (sx+ts//2, sy+ts//2), ts//4)
+        for ri in range(3):
+            rr = int(((anim + ri * 0.9) % 2.7) / 2.7 * (ts//2 - 2))
+            if 2 < rr < ts//2:
+                pygame.draw.circle(surf, (168, 215, 245), (sx+ts//2, sy+ts//2), rr, 1)
+        jet = int(4 + math.sin(anim * 3) * 2)
+        pygame.draw.line(surf, (205, 238, 255), (sx+ts//2, sy+ts//2-2), (sx+ts//2, sy+ts//2-jet-4), 2)
     elif tile == BN:
-        pygame.draw.rect(surf, (110, 70, 50), pygame.Rect(sx+4, sy+ts//2, ts-8, 10), border_radius=2)
-        pygame.draw.rect(surf, (90, 55, 40), pygame.Rect(sx+6, sy+ts//2+10, 4, 8))
-        pygame.draw.rect(surf, (90, 55, 40), pygame.Rect(sx+ts-10, sy+ts//2+10, 4, 8))
+        pygame.draw.rect(surf, (115, 74, 52), pygame.Rect(sx+4, sy+ts//2, ts-8, 10), border_radius=2)
+        pygame.draw.rect(surf, (88, 55, 38), pygame.Rect(sx+6, sy+ts//2+10, 4, 8))
+        pygame.draw.rect(surf, (88, 55, 38), pygame.Rect(sx+ts-10, sy+ts//2+10, 4, 8))
+        pygame.draw.rect(surf, (130, 90, 62), pygame.Rect(sx+4, sy+ts//2-4, ts-8, 5))
     elif tile == LP:
-        pygame.draw.rect(surf, (60, 60, 70), pygame.Rect(sx+ts//2-2, sy+4, 4, ts-8))
-        pygame.draw.circle(surf, (255, 240, 180), (sx+ts//2, sy+6), 5)
-        pygame.draw.circle(surf, (255, 255, 200, 100), (sx+ts//2, sy+6), 10)
+        anim = t_ms / 900.0
+        pygame.draw.rect(surf, (58, 58, 72), pygame.Rect(sx+ts//2-2, sy+4, 4, ts-8))
+        # Cross bar
+        pygame.draw.rect(surf, (65, 65, 80), pygame.Rect(sx+ts//2-8, sy+6, 16, 3))
+        # Pulsing glow rings
+        glow_r = 12 + int(math.sin(anim * 2.2) * 3)
+        pygame.draw.circle(surf, (255, 235, 140), (sx+ts//2, sy+6), glow_r)
+        pygame.draw.circle(surf, (255, 248, 190), (sx+ts//2, sy+6), 6)
+        pygame.draw.circle(surf, (255, 255, 220), (sx+ts//2, sy+6), 3)
     elif tile == SH:
         pygame.draw.rect(surf, (160, 130, 90), pygame.Rect(sx+2, sy+2, ts-5, ts-5))
         for ly in range(sy+8, sy+ts-4, 8):
-            pygame.draw.line(surf, (100, 70, 40), (sx+4, ly), (sx+ts-6, ly), 1)
-            # produce
-            pygame.draw.circle(surf, (220, 80, 80), (sx+10, ly-3), 2)
-            pygame.draw.circle(surf, (80, 220, 80), (sx+22, ly-3), 2)
-            pygame.draw.circle(surf, (220, 220, 80), (sx+34, ly-3), 2)
+            pygame.draw.line(surf, (100, 70, 38), (sx+4, ly), (sx+ts-6, ly), 1)
+            pygame.draw.circle(surf, (220, 72, 72), (sx+10, ly-3), 2)
+            pygame.draw.circle(surf, (72, 220, 72), (sx+22, ly-3), 2)
+            pygame.draw.circle(surf, (220, 220, 72), (sx+34, ly-3), 2)
     elif tile == PD:
-        pygame.draw.rect(surf, (140, 100, 60), pygame.Rect(sx+6, sy+8, ts-12, ts-12), border_radius=3)
-        pygame.draw.line(surf, (60,40,20), (sx+ts//2, sy+8), (sx+ts//2, sy+ts-8), 2)
+        pygame.draw.rect(surf, (142, 102, 62), pygame.Rect(sx+6, sy+8, ts-12, ts-12), border_radius=3)
+        pygame.draw.line(surf, (58, 38, 18), (sx+ts//2, sy+8), (sx+ts//2, sy+ts-8), 2)
+        pygame.draw.circle(surf, (58, 58, 70), (sx+ts//2, sy+ts//2-2), 3)
     elif tile == CF:
-        pygame.draw.rect(surf, (60, 40, 30), pygame.Rect(sx+6, sy+4, ts-12, ts-8), border_radius=2)
-        pygame.draw.circle(surf, (200, 50, 50), (sx+ts//2, sy+ts//2), 3)
-        # steam
+        pygame.draw.rect(surf, (52, 34, 24), pygame.Rect(sx+6, sy+4, ts-12, ts-8), border_radius=2)
+        pygame.draw.circle(surf, (205, 52, 52), (sx+ts//2, sy+ts//2), 3)
+        anim = t_ms / 320.0
         for i in range(3):
-            ox = (pygame.time.get_ticks() // 100 + i*60) % 30
-            pygame.draw.circle(surf, (220,220,220,100), (sx+ts//2-5+i*5, sy-ox//3), 3)
+            off = (anim + i * 0.85) % 2.5
+            oy = int(off * 6)
+            brightness = max(80, 220 - int(off * 80))
+            pygame.draw.circle(surf, (brightness, brightness, brightness),
+                               (sx + ts//2 - 5 + i*5, sy + 3 - oy), 3)
     elif tile == TV:
-        pygame.draw.rect(surf, (30, 30, 40), pygame.Rect(sx+2, sy+4, ts-5, ts-12), border_radius=2)
-        pygame.draw.rect(surf, (60, 120, 180), pygame.Rect(sx+5, sy+7, ts-11, ts-18))
+        pygame.draw.rect(surf, (28, 28, 38), pygame.Rect(sx+2, sy+4, ts-5, ts-12), border_radius=2)
+        sc_cols = [(55, 115, 178), (118, 55, 55), (55, 118, 62), (118, 118, 55)]
+        sc = sc_cols[(t_ms // 3000) % 4]
+        pygame.draw.rect(surf, sc, pygame.Rect(sx+5, sy+7, ts-11, ts-18))
+        scan = (t_ms // 55) % (ts - 20)
+        pygame.draw.line(surf, (255, 255, 255), (sx+5, sy+7+scan), (sx+ts-6, sy+7+scan), 1)
     elif tile == SK:
-        pygame.draw.rect(surf, (200, 200, 210), pygame.Rect(sx+2, sy+2, ts-5, ts-5), border_radius=2)
-        pygame.draw.line(surf, (100, 100, 120), (sx+ts//2, sy+4), (sx+ts//2, sy+ts-4), 1)
+        pygame.draw.rect(surf, (202, 202, 212), pygame.Rect(sx+2, sy+2, ts-5, ts-5), border_radius=2)
+        pygame.draw.line(surf, (98, 98, 118), (sx+ts//2, sy+4), (sx+ts//2, sy+ts-4), 1)
+        pygame.draw.rect(surf, (148, 148, 158), pygame.Rect(sx+ts//2-4, sy+5, 8, 4))
     elif tile == CH:
         pygame.draw.rect(surf, (130, 90, 60), pygame.Rect(sx+8, sy+8, ts-16, ts-16), border_radius=3)
-        pygame.draw.rect(surf, (90, 60, 40), pygame.Rect(sx+8, sy+6, ts-16, 4))
+        pygame.draw.rect(surf, (90, 60, 38), pygame.Rect(sx+8, sy+6, ts-16, 4))
     elif tile == TB:
         pygame.draw.rect(surf, (155, 110, 70), pygame.Rect(sx+2, sy+2, ts-5, ts-5), border_radius=3)
-        pygame.draw.rect(surf, (110, 75, 45), pygame.Rect(sx+2, sy+ts-12, ts-5, 6))
+        pygame.draw.rect(surf, (112, 76, 46), pygame.Rect(sx+2, sy+ts-12, ts-5, 6))
+        if h % 5 == 0:
+            pygame.draw.circle(surf, (178, 138, 98), (sx+ts//2, sy+ts//2), 5)
+            pygame.draw.circle(surf, (118, 78, 58), (sx+ts//2, sy+ts//2), 3)
     elif tile == BK:
-        pygame.draw.rect(surf, (110, 70, 40), pygame.Rect(sx+2, sy+2, ts-5, ts-5))
+        pygame.draw.rect(surf, (108, 70, 40), pygame.Rect(sx+2, sy+2, ts-5, ts-5))
         for ly in range(sy+6, sy+ts-4, 8):
-            pygame.draw.rect(surf, (180, 60, 60), pygame.Rect(sx+5, ly, 8, 6))
-            pygame.draw.rect(surf, (60, 180, 60), pygame.Rect(sx+14, ly, 8, 6))
-            pygame.draw.rect(surf, (60, 60, 180), pygame.Rect(sx+23, ly, 8, 6))
-            pygame.draw.rect(surf, (180, 180, 60), pygame.Rect(sx+32, ly, 8, 6))
+            pygame.draw.rect(surf, (178, 55, 55), pygame.Rect(sx+5,  ly, 8, 6))
+            pygame.draw.rect(surf, (55, 178, 55), pygame.Rect(sx+14, ly, 8, 6))
+            pygame.draw.rect(surf, (55, 55, 178), pygame.Rect(sx+23, ly, 8, 6))
+            pygame.draw.rect(surf, (178, 178, 55), pygame.Rect(sx+32, ly, 8, 6))
     elif tile == RG:
-        pygame.draw.rect(surf, (170, 70, 90), pygame.Rect(sx, sy, ts, ts))
-        pygame.draw.line(surf, (130, 50, 70), (sx, sy+ts//2), (sx+ts, sy+ts//2), 1)
+        pygame.draw.rect(surf, (170, 65, 88), pygame.Rect(sx, sy, ts, ts))
+        pygame.draw.line(surf, (128, 48, 68), (sx, sy+ts//2), (sx+ts, sy+ts//2), 1)
+        pygame.draw.rect(surf, (198, 95, 118), pygame.Rect(sx+3, sy+3, ts-6, ts-6), width=2)
     elif tile == WIN:
-        pygame.draw.rect(surf, (140, 180, 200), pygame.Rect(sx+2, sy+8, ts-5, ts-20))
-        pygame.draw.line(surf, (90, 130, 160), (sx+ts//2, sy+8), (sx+ts//2, sy+ts-12), 2)
+        pygame.draw.rect(surf, (132, 180, 208), pygame.Rect(sx+2, sy+8, ts-5, ts-20))
+        pygame.draw.line(surf, (88, 128, 160), (sx+ts//2, sy+8), (sx+ts//2, sy+ts-12), 2)
+        pygame.draw.line(surf, (88, 128, 160), (sx+2, sy+(ts-20)//2+8), (sx+ts-3, sy+(ts-20)//2+8), 2)
+        pygame.draw.line(surf, (205, 235, 255), (sx+5, sy+10), (sx+12, sy+18), 1)
     elif tile == CR:
         for stripe_y in range(sy+4, sy+ts, 8):
-            pygame.draw.rect(surf, (220, 220, 220), pygame.Rect(sx+4, stripe_y, ts-8, 4))
+            pygame.draw.rect(surf, (215, 215, 218), pygame.Rect(sx+4, stripe_y, ts-8, 4))
     elif tile == TM:
-        pygame.draw.rect(surf, (60, 60, 70), pygame.Rect(sx+4, sy+8, ts-9, ts-16), border_radius=2)
-        pygame.draw.rect(surf, (30, 30, 40), pygame.Rect(sx+6, sy+10, ts-13, ts-20))
+        pygame.draw.rect(surf, (55, 55, 68), pygame.Rect(sx+4, sy+8, ts-9, ts-16), border_radius=2)
+        pygame.draw.rect(surf, (28, 28, 38), pygame.Rect(sx+6, sy+10, ts-13, ts-20))
+        belt = (t_ms // 55) % max(1, ts - 22)
+        pygame.draw.line(surf, (48, 48, 60), (sx+6, sy+10+belt), (sx+ts-7, sy+10+belt), 1)
     elif tile == CN:
-        pygame.draw.rect(surf, (230, 220, 200), pygame.Rect(sx+ts//4, sy, ts//2, ts))
-        pygame.draw.rect(surf, (200, 190, 170), pygame.Rect(sx+ts//4, sy+2, ts//2, 6))
-        pygame.draw.rect(surf, (200, 190, 170), pygame.Rect(sx+ts//4, sy+ts-8, ts//2, 6))
+        pygame.draw.rect(surf, (232, 222, 202), pygame.Rect(sx+ts//4, sy, ts//2, ts))
+        pygame.draw.rect(surf, (198, 188, 168), pygame.Rect(sx+ts//4, sy+2, ts//2, 6))
+        pygame.draw.rect(surf, (198, 188, 168), pygame.Rect(sx+ts//4, sy+ts-8, ts//2, 6))
+        pygame.draw.line(surf, (208, 198, 178), (sx+ts//4+4, sy+8), (sx+ts//4+4, sy+ts-8), 1)
+        pygame.draw.line(surf, (208, 198, 178), (sx+ts//4+9, sy+8), (sx+ts//4+9, sy+ts-8), 1)
     elif tile == SC:
-        pygame.draw.rect(surf, (30, 60, 100), pygame.Rect(sx+2, sy+4, ts-5, ts-8), border_radius=2)
-        pygame.draw.rect(surf, (40, 90, 140), pygame.Rect(sx+4, sy+6, ts-9, ts-12), 1)
+        pygame.draw.rect(surf, (26, 56, 104), pygame.Rect(sx+2, sy+4, ts-5, ts-8), border_radius=2)
+        pygame.draw.rect(surf, (38, 88, 142), pygame.Rect(sx+4, sy+6, ts-9, ts-12), 1)
+        line_col = [(0, 255, 100), (255, 180, 0), (255, 60, 60), (60, 180, 255)][(t_ms // 2000) % 4]
+        for i in range(3):
+            pygame.draw.line(surf, line_col, (sx+8, sy+12+i*8),
+                             (sx+ts-10+((t_ms//2000+i) % 3)*4, sy+12+i*8), 1)
     elif tile == PG:
-        # pigeon
-        pygame.draw.ellipse(surf, (200, 200, 200), pygame.Rect(sx+10, sy+ts-16, 14, 8))
-        pygame.draw.circle(surf, (180, 180, 180), (sx+10, sy+ts-14), 4)
-        pygame.draw.circle(surf, (40,40,40), (sx+8, sy+ts-14), 1)
+        anim_bob = [0, 1, 0, -1][(t_ms // 700) % 4]
+        pygame.draw.ellipse(surf, (192, 186, 198), pygame.Rect(sx+10, sy+ts-16+anim_bob, 14, 8))
+        pygame.draw.circle(surf, (178, 172, 185), (sx+10, sy+ts-14+anim_bob), 4)
+        pygame.draw.circle(surf, (38, 38, 38), (sx+8, sy+ts-14+anim_bob), 1)
+        pygame.draw.arc(surf, (148, 98, 148),
+                        pygame.Rect(sx+10, sy+ts-18+anim_bob, 14, 8), 0, math.pi, 1)
     elif tile == FL:
-        pygame.draw.rect(surf, (60, 140, 60), pygame.Rect(sx, sy, ts, ts))
-        for fx, fy, fc in [(8,8,(255,80,80)),(20,12,(255,200,80)),(32,8,(160,80,200)),
-                            (12,28,(255,150,200)),(28,30,(80,180,255))]:
-            pygame.draw.circle(surf, fc, (sx+fx, sy+fy), 3)
+        anim = t_ms / 850.0
+        for fx, fy, fc in [(8, 8, (255, 80, 80)), (20, 12, (255, 205, 80)),
+                           (32, 8, (162, 80, 205)), (12, 28, (255, 148, 205)),
+                           (28, 30, (80, 178, 255))]:
+            sway = int(math.sin(anim + fx * 0.28) * 1.5)
+            pygame.draw.circle(surf, fc, (sx+fx+sway, sy+fy), 3)
+            pygame.draw.line(surf, (38, 112, 42),
+                             (sx+fx+sway, sy+fy+3), (sx+fx, sy+fy+9), 1)
     elif tile == FN:
-        pygame.draw.rect(surf, (130, 130, 140), pygame.Rect(sx+2, sy+ts//3, ts-5, 4))
-        pygame.draw.rect(surf, (130, 130, 140), pygame.Rect(sx+2, sy+2*ts//3, ts-5, 4))
+        pygame.draw.rect(surf, (128, 128, 140), pygame.Rect(sx+2, sy+ts//3, ts-5, 4))
+        pygame.draw.rect(surf, (128, 128, 140), pygame.Rect(sx+2, sy+2*ts//3, ts-5, 4))
+        for px_f in range(sx+4, sx+ts-4, 9):
+            pygame.draw.rect(surf, (118, 118, 130), pygame.Rect(px_f, sy+4, 4, ts-8))
     elif tile == CB:
         pygame.draw.rect(surf, (130, 110, 80), pygame.Rect(sx+4, sy+4, ts-9, ts-9), border_radius=3)
-        pygame.draw.rect(surf, (100, 80, 60), pygame.Rect(sx+4, sy+4, ts-9, ts-9), border_radius=3, width=2)
+        pygame.draw.rect(surf, (98, 78, 58), pygame.Rect(sx+4, sy+4, ts-9, ts-9), border_radius=3, width=2)
+        pygame.draw.line(surf, (108, 88, 65), (sx+ts//2, sy+4), (sx+ts//2, sy+ts-4), 1)
+        pygame.draw.line(surf, (108, 88, 65), (sx+4, sy+ts//2), (sx+ts-4, sy+ts//2), 1)
     elif tile == RP:
-        pygame.draw.rect(surf, (140, 30, 40), pygame.Rect(sx, sy, ts, ts))
-        pygame.draw.line(surf, (90, 20, 30), (sx, sy+ts-1), (sx+ts, sy+ts-1), 2)
+        pygame.draw.rect(surf, (148, 28, 38), pygame.Rect(sx, sy, ts, ts))
+        pygame.draw.line(surf, (88, 18, 28), (sx, sy+ts-1), (sx+ts, sy+ts-1), 2)
+        pygame.draw.rect(surf, (165, 42, 52), pygame.Rect(sx+3, sy+3, ts-6, ts-6), width=1)
+    elif tile == SG:
+        pygame.draw.rect(surf, (210, 188, 55), pygame.Rect(sx+4, sy+8, ts-9, ts-16), border_radius=2)
+        pygame.draw.rect(surf, (178, 158, 42), pygame.Rect(sx+4, sy+8, ts-9, ts-16), border_radius=2, width=1)
+        pygame.draw.rect(surf, (98, 88, 65), pygame.Rect(sx+ts//2-2, sy+ts-10, 4, 10))

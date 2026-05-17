@@ -15,7 +15,7 @@ from visual_fx import (
     draw_gameover, draw_win, draw_menu,
     draw_quest_log, draw_transition,
     apply_economic_tint, draw_phone,
-    draw_combat_hud,
+    draw_combat_hud, draw_street_incident,
 )
 
 
@@ -418,6 +418,7 @@ def main():
                 scene) if state == config.STATE_WORLD else None
             draw_hud(screen, economy, fnt_s, scene.name, inter, quests)
             draw_combat_hud(screen, player, fnt_s)
+            draw_street_incident(screen, manager.street.current, fnt, fnt_s)
 
             # Manager message
             if manager.message_t > 0:

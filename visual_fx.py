@@ -114,11 +114,17 @@ def draw_terminal(surf, economy, fnt, fnt_big, fnt_s, tick_progress):
                    chart_x+10, chart_y+30, chart_w-20, chart_h-40, config.BLUE)
     draw_sparkline(surf, economy.history, "ffr",
                    chart_x+10, chart_y+30, chart_w-20, chart_h-40, config.YELLOW)
+    draw_sparkline(surf, economy.history, "gdp",
+                   chart_x+10, chart_y+30, chart_w-20, chart_h-40, config.GREEN)
+    draw_sparkline(surf, economy.history, "approval",
+                   chart_x+10, chart_y+30, chart_w-20, chart_h-40, config.PURPLE)
 
     for col, label, ly in [
-        (config.ORANGE, "CPI 通膨率",  chart_y+chart_h-55),
-        (config.BLUE,   "失業率",      chart_y+chart_h-38),
-        (config.YELLOW, "FFR 利率",    chart_y+chart_h-21),
+        (config.ORANGE, "CPI 通膨率",  chart_y+chart_h-72),
+        (config.BLUE,   "失業率",      chart_y+chart_h-55),
+        (config.YELLOW, "FFR 利率",    chart_y+chart_h-38),
+        (config.GREEN,  "GDP 成長",    chart_y+chart_h-21),
+        (config.PURPLE, "支持度",      chart_y+chart_h-4),
     ]:
         pygame.draw.rect(surf, col, pygame.Rect(chart_x+10, ly+4, 16, 10))
         lt = fnt_s.render(label, True, config.LIGHT_GRAY)
@@ -541,6 +547,44 @@ def draw_phone(surf, economy, fnt, fnt_big, fnt_s):
 
     # Home button
     pygame.draw.rect(surf, (40, 40, 50), pygame.Rect(px + pw//2 - 30, py + ph - 4, 60, 4), border_radius=2)
+
+
+def draw_street_incident(surf, incident, fnt, fnt_s):
+    """底部 toast 通知，顯示非阻斷式街頭突發事件。"""
+    if not incident:
+        return
+    W = config.SCREEN_W
+    t = incident["t"]
+    duration = incident.get("duration", 8.0)
+    # 淡入淡出
+    fade = min(1.0, min(t, duration - t) * 2.0)
+    alpha = int(fade * 210)
+
+    bw, bh = 680, 72
+    bx = W // 2 - bw // 2
+    by = config.SCREEN_H - 110
+
+    bg = pygame.Surface((bw, bh), pygame.SRCALPHA)
+    bg.fill((10, 18, 30, alpha))
+    surf.blit(bg, (bx, by))
+
+    border_col = (*config.TERMINAL_AMBER, alpha)
+    border_surf = pygame.Surface((bw, bh), pygame.SRCALPHA)
+    pygame.draw.rect(border_surf, (255, 180, 0, alpha),
+                     pygame.Rect(0, 0, bw, bh), border_radius=8, width=2)
+    surf.blit(border_surf, (bx, by))
+
+    title_s = pygame.Surface((bw, 30), pygame.SRCALPHA)
+    title_t = fnt.render(incident["title"], True, config.TERMINAL_AMBER)
+    title_s.blit(title_t, (bw // 2 - title_t.get_width() // 2, 0))
+    title_s.set_alpha(alpha)
+    surf.blit(title_s, (bx, by + 8))
+
+    desc_s = pygame.Surface((bw, 24), pygame.SRCALPHA)
+    desc_t = fnt_s.render(incident["desc"], True, config.WHITE)
+    desc_s.blit(desc_t, (bw // 2 - desc_t.get_width() // 2, 0))
+    desc_s.set_alpha(alpha)
+    surf.blit(desc_s, (bx, by + 38))
 
 
 def apply_economic_tint(surf, economy):

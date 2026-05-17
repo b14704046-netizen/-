@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(python -c \"import manager; import visual_fx; import scenes; import main; print\\('OK'\\)\")"
     ]
   }
 }
