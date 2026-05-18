@@ -98,47 +98,58 @@ def _row(*cells):
 
 
 # ── City Overworld Map ────────────────────────────────────────────────
-# 50 columns × 35 rows. Has multiple buildings with doors.
+# 72 columns × 48 rows. New east district + south district added.
 def _build_city():
     """Build city as a list of lists, then place doors/buildings."""
-    cols, rows = 50, 35
+    cols, rows = 72, 48
     m = [[G for _ in range(cols)] for _ in range(rows)]
 
-    # Main horizontal roads (rows 8-10, 24-26)
+    # Horizontal roads: rows 8-10, 24-26 (original), 36-38 (new)
     for y in [8, 9, 10]:
         for x in range(cols):
             m[y][x] = R if y == 9 else S
     for y in [24, 25, 26]:
         for x in range(cols):
             m[y][x] = R if y == 25 else S
+    for y in [36, 37, 38]:
+        for x in range(cols):
+            m[y][x] = R if y == 37 else S
 
-    # Main vertical road (cols 23-25)
+    # Vertical roads: cols 23-25 (original), 49-51 (new east)
     for x in [23, 24, 25]:
         for y in range(rows):
             m[y][x] = R if x == 24 else S
+    for x in [49, 50, 51]:
+        for y in range(rows):
+            m[y][x] = R if x == 50 else S
 
-    # Crosswalks at intersections
-    for y in [8, 10, 24, 26]:
-        for x in [23, 25]:
+    # Crosswalks at all intersections
+    for y in [8, 10, 24, 26, 36, 38]:
+        for x in [23, 25, 49, 51]:
             m[y][x] = CR
 
     # Building plots — each has walls + door tile
     # Format: (x0, y0, x1, y1, door_x, door_y, scene_name)
     buildings = [
-        # Top half (rows 0-7)
-        (1,  1,  10, 7,  5,  7,  config.SCENE_APARTMENT),  # Powell's apartment
-        (12, 1,  21, 7,  16, 7,  config.SCENE_CAFE),       # Coffee shop
-        (27, 1,  36, 7,  31, 7,  config.SCENE_SUPERMARKET),# Supermarket
-        (38, 1,  48, 7,  43, 7,  config.SCENE_GYM),        # Gym
+        # Top half (rows 1-7)
+        (1,  1,  10, 7,  5,  7,  config.SCENE_APARTMENT),
+        (12, 1,  21, 7,  16, 7,  config.SCENE_CAFE),
+        (27, 1,  36, 7,  31, 7,  config.SCENE_SUPERMARKET),
+        (38, 1,  48, 7,  43, 7,  config.SCENE_GYM),
+        (52, 1,  70, 7,  61, 7,  config.SCENE_BANK),       # NEW
 
-        # Middle (rows 11-23) — between two roads, includes park
-        (1,  11, 10, 23, 5,  23, config.SCENE_FED),        # Fed building
-        (12, 11, 21, 23, 16, 23, config.SCENE_PRESS),      # Press room
-        # Park (no building, just trees)
-        (38, 11, 48, 23, 43, 23, config.SCENE_WALL_ST),    # Wall Street
+        # Middle (rows 11-23)
+        (1,  11, 10, 23, 5,  23, config.SCENE_FED),
+        (12, 11, 21, 23, 16, 23, config.SCENE_PRESS),
+        # Park (27-36, 11-23) — open, no building
+        (38, 11, 48, 23, 43, 23, config.SCENE_WALL_ST),
+        (52, 11, 70, 23, 61, 23, config.SCENE_HOSPITAL),   # NEW
 
-        # Bottom (rows 27-34)
-        (15, 27, 32, 34, 23, 27, config.SCENE_CAPITOL),    # Capitol
+        # Bottom original (rows 27-34)
+        (15, 27, 32, 34, 23, 27, config.SCENE_CAPITOL),
+
+        # New south district (rows 39-47)
+        (1,  39, 22, 47, 11, 39, config.SCENE_UNIVERSITY), # NEW
     ]
 
     for x0, y0, x1, y1, dx, dy, _ in buildings:
@@ -159,67 +170,116 @@ def _build_city():
         # Door
         m[dy][dx] = DR
 
-    # Park area in middle (around 27-36, 11-23)
+    # Park area in middle (27-36, 11-23) — unchanged
     for y in range(12, 23):
         for x in range(27, 37):
             m[y][x] = G
-    # Trees in park
     for tx, ty in [(28,13), (30,12), (33,12), (35,13), (28,16), (35,16),
-                    (28,20), (30,21), (33,21), (35,20), (31,16), (32,18),
-                    (29,15), (34,14), (30,19), (36,17)]:
+                   (28,20), (30,21), (33,21), (35,20), (31,16), (32,18),
+                   (29,15), (34,14), (30,19), (36,17)]:
         m[ty][tx] = TR
-    # Fountain
-    m[17][31] = FT
-    m[17][32] = FT
-    m[18][31] = FT
-    m[18][32] = FT
-    # Benches
-    m[15][29] = BN
-    m[15][34] = BN
-    m[20][29] = BN
-    m[20][34] = BN
-    # Pigeon spots
-    m[16][30] = PG
-    m[19][33] = PG
-    m[14][32] = PG
-    m[21][31] = PG
-    # Flowers along park path
+    m[17][31] = FT; m[17][32] = FT
+    m[18][31] = FT; m[18][32] = FT
+    m[15][29] = BN; m[15][34] = BN
+    m[20][29] = BN; m[20][34] = BN
+    m[16][30] = PG; m[19][33] = PG
+    m[14][32] = PG; m[21][31] = PG
     for tx, ty in [(28,17), (29,18), (33,16), (34,19), (31,14), (32,21)]:
         m[ty][tx] = FL
 
-    # Trees/flowers on grass borders
+    # East district open space — benches + trees (cols 52-70, rows 8-10 road strip)
+    for tx, ty in [(54,11),(58,11),(63,11),(67,11),
+                   (54,24),(58,24),(63,24),(67,24)]:
+        if m[ty][tx] == S:
+            m[ty][tx] = BN
+    # East plaza between bank (rows 1-7) and hospital (rows 11-23): rows 8-10 is road
+    for tx, ty in [(53,8),(56,8),(60,8),(64,8),(68,8)]:
+        if m[ty][tx] == S:
+            m[ty][tx] = LP
+
+    # South district open plazas (cols 27-70, rows 39-47)
+    for y in range(40, 48):
+        for x in range(27, 71):
+            if m[y][x] == G:
+                pass  # will be handled by random below
+    # Park-like area south-east of university
+    for tx, ty in [(26,41),(27,40),(30,42),(33,41),(36,43),
+                   (40,41),(44,40),(47,42),(50,41),(53,43),
+                   (57,40),(60,42),(64,41),(67,43),(70,41)]:
+        if 0 <= ty < rows and 0 <= tx < cols and m[ty][tx] == G:
+            m[ty][tx] = TR
+    for tx, ty in [(28,43),(31,44),(35,42),(42,44),(46,43),(51,42)]:
+        if 0 <= ty < rows and 0 <= tx < cols and m[ty][tx] == G:
+            m[ty][tx] = FL
+    # Benches in south plaza
+    for tx, ty in [(30,40),(45,40),(60,40),(30,45),(45,45),(60,45)]:
+        if 0 <= ty < rows and 0 <= tx < cols and m[ty][tx] == G:
+            m[ty][tx] = BN
+    # Fountain in south central plaza
+    for ty in [42, 43]:
+        for tx in [37, 38]:
+            m[ty][tx] = FT
+    m[42][36] = FL; m[42][39] = FL
+    m[43][36] = FL; m[43][39] = FL
+
+    # Random trees/flowers on remaining grass
     for x in range(0, cols):
         for y in range(0, rows):
             if m[y][x] == G:
-                if random.random() < 0.05 and not (27 <= x <= 36 and 11 <= y <= 23):
+                in_park = (27 <= x <= 36 and 11 <= y <= 23)
+                in_south_plaza = (27 <= x <= 70 and 39 <= y <= 47)
+                if random.random() < 0.05 and not in_park and not in_south_plaza:
                     m[y][x] = TR
-                elif random.random() < 0.06:
+                elif random.random() < 0.06 and not in_park:
                     m[y][x] = FL
 
-    # Lampposts along road (denser for atmosphere)
+    # Lampposts along all road sidewalks
     for x in range(2, cols, 5):
-        if m[7][x] == S: m[7][x] = LP
-        if m[11][x] == S: m[11][x] = LP
-        if m[23][x] == S: m[23][x] = LP
-        if m[27][x] == S: m[27][x] = LP
+        for sw_y in [7, 11, 23, 27, 35, 39]:
+            if 0 <= sw_y < rows and m[sw_y][x] == S:
+                m[sw_y][x] = LP
 
-    # Bus stops (bench + sign) on sidewalks
-    for bx, by in [(8, 7), (20, 11), (38, 27), (12, 23)]:
-        if m[by][bx] == S:
+    # Bus stops
+    for bx, by in [(8, 7), (20, 11), (38, 27), (12, 23),
+                   (56, 7), (56, 23), (8, 35), (30, 35)]:
+        if 0 <= by < rows and 0 <= bx < cols and m[by][bx] == S:
             m[by][bx] = BN
-        if 0 <= bx+1 < cols and m[by][bx+1] == S:
+        if 0 <= by < rows and 0 <= bx+1 < cols and m[by][bx+1] == S:
             m[by][bx+1] = SG
 
-    # Sign markers near doors
+    # Newspaper stands (SG)
+    for nx, ny in [(4, 8), (14, 24), (40, 10), (55, 10), (55, 26), (8, 35)]:
+        if 0 <= ny < rows and 0 <= nx < cols and m[ny][nx] == S:
+            m[ny][nx] = SG
+    # ATMs (CB)
+    for ax, ay in [(39, 8), (22, 26), (48, 26), (48, 10)]:
+        if 0 <= ay < rows and 0 <= ax < cols and m[ay][ax] == S:
+            m[ay][ax] = CB
+    # Graffiti walls (SG)
+    for gx, gy in [(11, 10), (26, 26), (26, 36), (48, 38)]:
+        if 0 <= gy < rows and 0 <= gx < cols and m[gy][gx] == S:
+            m[gy][gx] = SG
+
     signs = {
-        (4, 7):  "🏠 公寓",
-        (15, 7): "☕ 咖啡廳",
-        (30, 7): "🛒 超市",
-        (42, 7): "💪 健身房",
-        (4, 23): "🏛 聯準會",
-        (15, 23):"📰 新聞室",
-        (42, 23):"📈 華爾街",
-        (22, 27):"🏛 國會",
+        (4,  7):  "🏠 公寓",
+        (15, 7):  "☕ 咖啡廳",
+        (30, 7):  "🛒 超市",
+        (42, 7):  "💪 健身房",
+        (60, 7):  "🏦 聯邦銀行",
+        (4,  23): "🏛 聯準會",
+        (15, 23): "📰 新聞室",
+        (42, 23): "📈 華爾街",
+        (60, 23): "🏥 醫療中心",
+        (22, 27): "🏛 國會",
+        (10, 39): "🎓 聯邦大學",
+        (4,  8):  "📰 報攤",
+        (14, 24): "📰 報攤",
+        (39, 8):  "🏧 ATM",
+        (22, 26): "🏧 ATM",
+        (11, 10): "🖌 塗鴉牆",
+        (26, 26): "🖌 塗鴉牆",
+        (55, 10): "📰 報攤",
+        (48, 26): "🏧 ATM",
     }
 
     return m, buildings, signs
@@ -259,6 +319,8 @@ def _build_apartment():
     m[3][16] = TB; m[3][17] = TB
     # Bookshelf
     m[2][6] = BK; m[2][7] = BK
+    # Fridge in kitchen corner
+    m[2][14] = CB
     # Rug in living area
     for x in range(9, 14):
         for y in range(7, 11):
@@ -272,10 +334,11 @@ def _build_apartment():
     npcs = []
     doors = [{"x": 10, "y": 13, "target": config.SCENE_CITY, "spawn_tx": 5, "spawn_ty": 8}]
     objects = [
-        {"x": 2, "y": 2, "type": "bed",    "label": "床（睡覺跳過時間）"},
-        {"x": 17, "y": 2, "type": "coffee","label": "咖啡機（手沖小遊戲）"},
-        {"x": 11, "y": 2, "type": "tv",    "label": "電視（看新聞）"},
-        {"x": 6, "y": 2, "type": "books",  "label": "書架（讀經濟學）"},
+        {"x": 2,  "y": 2, "type": "bed",    "label": "床（睡覺跳過時間）"},
+        {"x": 17, "y": 2, "type": "coffee", "label": "咖啡機（手沖小遊戲）"},
+        {"x": 11, "y": 2, "type": "tv",     "label": "電視（看新聞）"},
+        {"x": 6,  "y": 2, "type": "books",  "label": "書架（讀經濟學）"},
+        {"x": 14, "y": 2, "type": "fridge", "label": "冰箱（看食物價格）"},
     ]
     return m, npcs, doors, objects, (10, 12)
 
@@ -293,17 +356,23 @@ def _build_cafe():
     for tx in [3, 7, 11]:
         m[7][tx] = TB; m[7][tx+1] = TB
         m[6][tx] = CH; m[8][tx] = CH
+    # Bulletin board on east wall
+    m[5][16] = BK
     # Window
     m[0][4] = WIN; m[0][9] = WIN; m[0][13] = WIN
 
     npcs = [
-        NPC(6, 4, "barista", "店員Anna", "cafe_barista", 0),
-        NPC(4, 7, "citizen", "上班族",     "cafe_customer1", 0),
-        NPC(12, 7, "citizen", "學生",      "cafe_customer2", 0),
+        NPC(6, 4, "barista",    "店員Anna",   "cafe_barista",    0),
+        NPC(4, 7, "citizen",    "上班族",      "cafe_customer1",  0),
+        NPC(12, 7, "citizen",   "學生",        "cafe_customer2",  0),
+        NPC(8, 7, "citizen",    "作家 David",  "cafe_writer",     1),
+        NPC(14, 5, "trader",    "股市老手",    "cafe_trader",     0),
     ]
     doors = [{"x": 9, "y": 11, "target": config.SCENE_CITY, "spawn_tx": 16, "spawn_ty": 8}]
     objects = [
-        {"x": 5, "y": 2, "type": "coffee_mg", "label": "鷹派咖啡（小遊戲）"},
+        {"x": 5,  "y": 2,  "type": "coffee_mg",  "label": "鷹派咖啡（小遊戲）"},
+        {"x": 16, "y": 5,  "type": "bulletin",    "label": "公告欄（看本地消息）"},
+        {"x": 13, "y": 7,  "type": "wifi_news",   "label": "WiFi 新聞（看即時動態）"},
     ]
     return m, npcs, doors, objects, (9, 10)
 
@@ -333,15 +402,18 @@ def _build_fed():
     m[0][6] = WIN; m[0][11] = WIN; m[0][16] = WIN
 
     npcs = [
-        NPC(8, 4, "guard",     "守衛",         "fed_guard", 2),
-        NPC(15, 4, "secretary","秘書 Jane",    "fed_secretary", 0),
-        NPC(12, 8, "politician","副主席 Brain","fed_vicechair", 0),
+        NPC(8,  4,  "guard",      "守衛",            "fed_guard",       2),
+        NPC(15, 4,  "secretary",  "秘書 Jane",        "fed_secretary",   0),
+        NPC(12, 8,  "politician", "副主席 Brian",     "fed_vicechair",   0),
+        NPC(5,  6,  "politician", "首席經濟學家 Smith","fed_economist1",  0),
+        NPC(18, 6,  "secretary",  "政策分析師 Park",  "fed_analyst",     1),
     ]
     doors = [{"x": 11, "y": 13, "target": config.SCENE_CITY, "spawn_tx": 5, "spawn_ty": 24}]
     objects = [
-        {"x": 4, "y": 2, "type": "terminal", "label": "主控終端（經濟模擬器）"},
-        {"x": 10, "y": 2, "type": "terminal", "label": "副控終端"},
-        {"x": 18, "y": 2, "type": "terminal", "label": "資料終端"},
+        {"x": 4,  "y": 2, "type": "terminal",    "label": "主控終端（經濟模擬器）"},
+        {"x": 10, "y": 2, "type": "terminal",    "label": "副控終端"},
+        {"x": 18, "y": 2, "type": "terminal",    "label": "資料終端"},
+        {"x": 11, "y": 5, "type": "policy_memo", "label": "政策備忘錄（Taylor Rule 建議）"},
     ]
     return m, npcs, doors, objects, (11, 12)
 
@@ -388,12 +460,16 @@ def _build_gym():
     # TV
     m[1][8] = TV
     npcs = [
-        NPC(3, 5, "citizen", "教練 Mike",   "gym_coach", 0),
-        NPC(10, 6, "citizen", "健身愛好者",  "gym_member", 0),
+        NPC(3,  5,  "citizen", "教練 Mike",  "gym_coach",    0),
+        NPC(10, 6,  "citizen", "健身愛好者", "gym_member",   0),
+        NPC(3,  7,  "citizen", "練腿日男",   "gym_heavy",    2),
+        NPC(12, 4,  "citizen", "健身新人",   "gym_newbie",   1),
     ]
     doors = [{"x": 8, "y": 10, "target": config.SCENE_CITY, "spawn_tx": 43, "spawn_ty": 8}]
     objects = [
-        {"x": 6, "y": 3, "type": "treadmill_mg", "label": "中性利率跑步機（節奏小遊戲）"},
+        {"x": 6,  "y": 3, "type": "treadmill_mg", "label": "中性利率跑步機（節奏小遊戲）"},
+        {"x": 4,  "y": 7, "type": "workout",       "label": "舉重（鍛煉：支持度 +3）"},
+        {"x": 10, "y": 1, "type": "tv",            "label": "電視（看財經新聞）"},
     ]
     return m, npcs, doors, objects, (8, 9)
 
@@ -433,8 +509,13 @@ def _build_wall_st():
     for x in [3, 6, 9, 12, 15]:
         m[3][x] = D; m[2][x] = T
         m[6][x] = D; m[5][x] = T
+    # Big board on north wall
+    for x in range(4, 14):
+        m[1][x] = SC
     # Bull statue
     m[9][3] = CB
+    # Bear statue
+    m[9][14] = CB
     npcs = [
         NPC(4, 4, "trader", "多頭交易員",     "ws_bull", 0),
         NPC(7, 4, "trader", "空頭交易員",     "ws_bear", 0),
@@ -444,7 +525,9 @@ def _build_wall_st():
     ]
     doors = [{"x": 9, "y": 11, "target": config.SCENE_CITY, "spawn_tx": 43, "spawn_ty": 24}]
     objects = [
-        {"x": 9, "y": 8, "type": "ticker", "label": "看即時報價"},
+        {"x": 9,  "y": 8, "type": "ticker",     "label": "看即時報價"},
+        {"x": 9,  "y": 1, "type": "big_board",  "label": "大看板（詳細市場數據）"},
+        {"x": 15, "y": 8, "type": "phone_call", "label": "紅色電話（打給財政部長）"},
     ]
     return m, npcs, doors, objects, (9, 10)
 
@@ -506,17 +589,142 @@ def _build_park():
     # Flowers
     for tx, ty in [(4,7), (6,7), (18,7), (20,7), (4,11), (6,11), (18,11), (20,11)]:
         m[ty][tx] = FL
+    # Newspaper stand near entrance
+    m[13][3] = SG
 
     npcs = [
-        NPC(7, 5, "elder",  "公園老伯",   "park_elder", 0),
-        NPC(15, 5, "child", "小孩",       "park_kid", 1),
-        NPC(20, 11, "citizen", "慢跑者",  "park_jogger", 2),
+        NPC(7, 5, "elder",     "公園老伯",  "park_elder", 0),
+        NPC(15, 5, "child",    "小孩",      "park_kid", 1),
+        NPC(20, 11, "citizen", "慢跑者",    "park_jogger", 2),
+        NPC(18, 4, "elder",    "下棋老人",  "park_elder", 1),
     ]
     doors = [{"x": 12, "y": 15, "target": config.SCENE_CITY, "spawn_tx": 31, "spawn_ty": 15}]
     objects = [
-        {"x": 11, "y": 9, "type": "pigeon_mg", "label": "餵鴿子（紓壓小遊戲）"},
+        {"x": 11, "y": 9, "type": "pigeon_mg",     "label": "餵鴿子（紓壓小遊戲）"},
+        {"x": 12, "y": 6, "type": "fountain_coin", "label": "噴泉（丟硬幣許願）"},
+        {"x": 3,  "y": 13, "type": "newspaper",    "label": "報攤（看今日頭條）"},
     ]
     return m, npcs, doors, objects, (12, 14)
+
+
+# ── Bank ──────────────────────────────────────────────────────────────
+def _build_bank():
+    m = _room(22, 14, MR)
+    m[13][11] = DR
+    # Red carpet entrance
+    for y in range(9, 13):
+        m[y][10] = RP; m[y][11] = RP; m[y][12] = RP
+    # Teller counters
+    for x in range(4, 18):
+        m[4][x] = SK
+    # Vault door (decorative CB block cluster)
+    for y in range(2, 5):
+        for x in range(2, 5):
+            m[y][x] = CB
+    # Trading terminals
+    for x in [6, 9, 12, 15, 18]:
+        m[7][x] = T; m[6][x] = D
+    # Columns
+    m[9][3] = CN; m[9][18] = CN
+    # Windows
+    m[0][6] = WIN; m[0][11] = WIN; m[0][16] = WIN
+
+    npcs = [
+        NPC(10, 5,  "trader",     "行員 Lisa",     "bank_teller",   0),
+        NPC(14, 8,  "trader",     "投資人 Marcus", "bank_investor", 0),
+        NPC(5,  8,  "politician", "貸款專員 Chen", "bank_loan",     0),
+        NPC(3,  5,  "trader",     "行長 White",    "bank_manager",  0),
+        NPC(18, 8,  "citizen",    "企業客戶",      "bank_corp",     1),
+    ]
+    doors = [{"x": 11, "y": 13, "target": config.SCENE_CITY,
+              "spawn_tx": 61, "spawn_ty": 8}]
+    objects = [
+        {"x": 9,  "y": 7, "type": "terminal", "label": "投資終端（市場數據）"},
+        {"x": 12, "y": 7, "type": "ticker",   "label": "即時報價"},
+        {"x": 3,  "y": 3, "type": "vault",    "label": "聯邦金庫（財富分配報告）"},
+    ]
+    return m, npcs, doors, objects, (11, 12)
+
+
+# ── Hospital ──────────────────────────────────────────────────────────
+def _build_hospital():
+    m = _room(22, 14, TI)
+    m[13][11] = DR
+    # Reception desk
+    for x in range(5, 17):
+        m[3][x] = SK
+    # Beds (examination rooms)
+    for bx, by_b in [(3, 6), (3, 9), (18, 6), (18, 9)]:
+        m[by_b][bx] = B; m[by_b][bx+1] = B
+    # Medical equipment
+    m[2][3] = TV; m[2][18] = TV
+    # Columns
+    m[7][7] = CN; m[7][14] = CN
+    # Windows
+    m[0][5] = WIN; m[0][11] = WIN; m[0][17] = WIN
+    # Rug in waiting area
+    for x in range(8, 14):
+        for y in range(5, 8):
+            m[y][x] = RG
+
+    npcs = [
+        NPC(9,  4,  "secretary",  "王醫生",       "hospital_doctor",   0),
+        NPC(14, 4,  "citizen",    "護士 Amy",      "hospital_nurse",    2),
+        NPC(5,  7,  "citizen",    "病患",          "hospital_patient",  0),
+        NPC(16, 8,  "politician", "主任 Chang",    "hospital_chief",    0),
+        NPC(19, 5,  "citizen",    "病人家屬",      "hospital_family",   1),
+    ]
+    doors = [{"x": 11, "y": 13, "target": config.SCENE_CITY,
+              "spawn_tx": 61, "spawn_ty": 24}]
+    objects = [
+        {"x": 11, "y": 3, "type": "books",   "label": "醫學期刊（放鬆閱讀）"},
+        {"x": 10, "y": 6, "type": "checkup", "label": "健康檢查站（恢復血量）"},
+    ]
+    return m, npcs, doors, objects, (11, 12)
+
+
+# ── University ────────────────────────────────────────────────────────
+def _build_university():
+    m = _room(24, 16, WD)
+    m[0][12] = DR   # north wall door — spawn (12,1) is now clear
+    # Screen moved to south end so entry rows 1-2 stay clear
+    for x in range(9, 15):
+        m[13][x] = SC
+    # Podium just north of screen
+    m[11][11] = PD; m[11][12] = PD
+    # Tiered lecture seating (rows 3-9, audience faces south toward screen)
+    for sy in [3, 4, 6, 7, 9]:
+        for sx in range(3, 21, 2):
+            m[sy][sx] = CH
+    # Library corner (west side)
+    for x in range(2, 7):
+        m[12][x] = BK
+    # Study tables (east side)
+    for tx in [16, 19]:
+        m[12][tx] = TB; m[12][tx+1] = TB
+        m[13][tx] = CH; m[13][tx+1] = CH
+    # Vending machine near entry
+    m[2][2] = CB
+    # Windows
+    m[0][6] = WIN; m[0][17] = WIN
+    m[15][6] = WIN; m[15][12] = WIN; m[15][18] = WIN
+
+    npcs = [
+        NPC(12, 10, "politician", "陳教授",          "univ_prof",     0),
+        NPC(5,  5,  "citizen",    "學生 Kevin",       "univ_student",  1),
+        NPC(15, 5,  "citizen",    "學生 Mia",         "univ_student2", 0),
+        NPC(4,  12, "citizen",    "圖書館員",          "park_jogger",   0),
+        NPC(9,  8,  "citizen",    "研究生 Lin",        "univ_grad",     1),
+        NPC(18, 8,  "politician", "訪問學者 Dr. Kim",  "univ_visitor",  0),
+    ]
+    doors = [{"x": 12, "y": 0, "target": config.SCENE_CITY,
+              "spawn_tx": 11, "spawn_ty": 38}]
+    objects = [
+        {"x": 11, "y": 11, "type": "press_mg", "label": "上台演講（記者會模式）"},
+        {"x": 4,  "y": 12, "type": "books",    "label": "圖書館（讀經濟學）"},
+        {"x": 2,  "y": 2,  "type": "vend",     "label": "自動販賣機（買飲料）"},
+    ]
+    return m, npcs, doors, objects, (12, 1)
 
 
 # ── Scene class ───────────────────────────────────────────────────────
@@ -552,29 +760,67 @@ def build_all_scenes():
     scenes = {}
 
     # City overworld
-    park_door = {"x": 31, "y": 14, "target": config.SCENE_PARK, "spawn_tx": 12, "spawn_ty": 14}
+    park_door = {"x": 31, "y": 14, "target": config.SCENE_PARK,
+                 "spawn_tx": 12, "spawn_ty": 14}
     city_doors = [park_door]
+    spawn_map = {
+        config.SCENE_APARTMENT:  (10, 12),
+        config.SCENE_CAFE:       (9,  10),
+        config.SCENE_SUPERMARKET:(10, 11),
+        config.SCENE_GYM:        (8,   9),
+        config.SCENE_FED:        (11, 12),
+        config.SCENE_PRESS:      (9,  10),
+        config.SCENE_WALL_ST:    (9,  10),
+        config.SCENE_CAPITOL:    (11, 12),
+        config.SCENE_BANK:       (11, 12),
+        config.SCENE_HOSPITAL:   (11, 12),
+        config.SCENE_UNIVERSITY: (12,  1),
+    }
     for x0, y0, x1, y1, dx, dy, target in CITY_BUILDINGS:
-        spawn = {
-            config.SCENE_APARTMENT: (10, 12), config.SCENE_CAFE: (9, 10),
-            config.SCENE_SUPERMARKET: (10, 11), config.SCENE_GYM: (8, 9),
-            config.SCENE_FED: (11, 12), config.SCENE_PRESS: (9, 10),
-            config.SCENE_WALL_ST: (9, 10), config.SCENE_CAPITOL: (11, 12),
-        }[target]
+        sp = spawn_map[target]
         city_doors.append({"x": dx, "y": dy, "target": target,
-                            "spawn_tx": spawn[0], "spawn_ty": spawn[1]})
+                            "spawn_tx": sp[0], "spawn_ty": sp[1]})
+
     city_npcs = [
-        NPC(15, 9,  "citizen",  "路人甲",   "street_citizen_1", 3),
-        NPC(30, 9,  "journalist","記者",    "street_journalist", 2),
-        NPC(20, 25, "protester", "抗議者",  "street_protester", 1),
-        NPC(35, 25, "citizen",   "上班族",  "street_citizen_2", 3),
-        NPC(8, 25,  "unemployed","失業者",  "street_unemployed", 1),
-        NPC(24, 12, "child",     "小朋友",  "street_child", 2),
-        NPC(40, 12, "elder",     "退休者",  "street_elder", 0),
-        NPC(45, 30, "citizen",   "夜班工人","street_worker", 2),
+        # Original city NPCs
+        NPC(15, 9,  "citizen",    "路人甲",    "street_citizen_1",  3),
+        NPC(30, 9,  "journalist", "記者",      "street_journalist", 2),
+        NPC(20, 25, "protester",  "抗議者",    "street_protester",  1),
+        NPC(35, 25, "citizen",    "上班族",    "street_citizen_2",  3),
+        NPC(8,  25, "unemployed", "失業者",    "street_unemployed", 1),
+        NPC(24, 12, "child",      "小朋友",    "street_child",      2),
+        NPC(40, 12, "elder",      "退休者",    "street_elder",      0),
+        NPC(45, 30, "citizen",    "夜班工人",  "street_worker",     2),
+        NPC(12, 25, "protester",  "示威者",    "street_protester",  2),
+        NPC(47, 9,  "shopper",    "購物者",    "street_citizen_2",  1),
+        # East district NPCs (near bank & hospital)
+        NPC(57, 9,  "trader",     "銀行家",    "city_banker",       2),
+        NPC(64, 9,  "citizen",    "東區居民",  "city_retiree_east", 1),
+        NPC(57, 25, "citizen",    "護士",      "city_nurse",        2),
+        NPC(63, 25, "elder",      "退休阿姨",  "city_retiree_east", 0),
+        # South district NPCs (near university + plaza)
+        NPC(11, 37, "citizen",    "大學生",    "city_student",      2),
+        NPC(35, 41, "citizen",    "南區居民",  "city_worker_south", 1),
+        NPC(55, 41, "unemployed", "失業者",    "street_unemployed", 2),
+        NPC(42, 43, "child",      "小孩",      "street_child",      1),
+        NPC(28, 30, "citizen",    "路人",      "street_citizen_2",  2),
+        NPC(60, 30, "journalist", "記者",      "street_journalist", 1),
+    ]
+    city_objects = [
+        {"x": 4,  "y": 8,  "type": "newspaper", "label": "報攤（看今日頭條）"},
+        {"x": 14, "y": 24, "type": "newspaper",  "label": "報攤（看今日頭條）"},
+        {"x": 39, "y": 8,  "type": "atm",        "label": "ATM（查帳戶）"},
+        {"x": 22, "y": 26, "type": "atm",         "label": "ATM（查帳戶）"},
+        {"x": 11, "y": 10, "type": "graffiti",    "label": "塗鴉牆（看民意）"},
+        {"x": 26, "y": 26, "type": "graffiti",    "label": "塗鴉牆（看民意）"},
+        {"x": 55, "y": 10, "type": "newspaper",   "label": "報攤（東區）"},
+        {"x": 48, "y": 26, "type": "atm",         "label": "ATM（東區）"},
+        {"x": 26, "y": 36, "type": "graffiti",    "label": "塗鴉牆（南區）"},
+        {"x": 8,  "y": 35, "type": "newspaper",   "label": "報攤（南區）"},
     ]
     scenes[config.SCENE_CITY] = Scene(config.SCENE_CITY, CITY_MAP,
-                                       city_npcs, city_doors, [], spawn=(5, 8))
+                                      city_npcs, city_doors,
+                                      city_objects, spawn=(5, 8))
 
     # Interiors
     for name, builder in [
@@ -587,6 +833,9 @@ def build_all_scenes():
         (config.SCENE_WALL_ST,     _build_wall_st),
         (config.SCENE_CAPITOL,     _build_capitol),
         (config.SCENE_PARK,        _build_park),
+        (config.SCENE_BANK,        _build_bank),
+        (config.SCENE_HOSPITAL,    _build_hospital),
+        (config.SCENE_UNIVERSITY,  _build_university),
     ]:
         tiles, npcs, doors, objects, spawn = builder()
         scenes[name] = Scene(name, tiles, npcs, doors, objects, spawn=spawn)
@@ -725,12 +974,17 @@ def _draw_city_ambience(surf, scene, cx, cy):
         (25, (225, 122, 40), 0.044, 0.12,  1),
         (25, (178, 52, 178), 0.048, 0.72, -1),
         (25, (178, 178, 52), 0.036, 0.62,  1),
+        (37, (255, 160, 50), 0.040, 0.35,  1),
+        (37, (100, 130, 255),0.032, 0.80, -1),
     ]
     for (road_ty, color, speed, phase, direction) in h_cars:
         cw, ch = 38, 22
         travel = int((t_ms * speed + phase * road_w) * direction) % road_w
         if direction < 0:
             travel = road_w - (int((t_ms * speed + phase * road_w)) % road_w)
+        tile_x = travel // ts
+        if not (0 <= tile_x < scene.cols and scene.tiles[road_ty][tile_x] in (R, S, CR)):
+            continue
         lane_off = (ts // 4) if direction > 0 else (ts // 2 + 4)
         car_x = travel - int(cx)
         car_y = road_ty * ts - int(cy) + lane_off - ch // 2
@@ -741,7 +995,6 @@ def _draw_city_ambience(surf, scene, cx, cy):
                              pygame.Rect(wind_x, car_y + 3, 12, 10), border_radius=2)
             pygame.draw.circle(surf, (28, 28, 28), (car_x + 7, car_y + ch - 1), 4)
             pygame.draw.circle(surf, (28, 28, 28), (car_x + cw - 7, car_y + ch - 1), 4)
-            # Headlights / tail-lights
             light_col = (255, 245, 180) if direction > 0 else (255, 60, 60)
             light_x = (car_x + cw - 3) if direction > 0 else (car_x + 1)
             pygame.draw.circle(surf, light_col, (light_x, car_y + 5), 2)
@@ -751,12 +1004,17 @@ def _draw_city_ambience(surf, scene, cx, cy):
     v_cars = [
         (24, (62, 182, 182), 0.042, 0.20,  1),
         (24, (202, 102, 62), 0.036, 0.78, -1),
+        (50, (72, 192, 122), 0.038, 0.45,  1),
+        (50, (182, 72,  62), 0.044, 0.85, -1),
     ]
     for (road_tx, color, speed, phase, direction) in v_cars:
         cw, ch = 22, 38
         travel = int((t_ms * speed + phase * road_h) * direction) % road_h
         if direction < 0:
             travel = road_h - (int((t_ms * speed + phase * road_h)) % road_h)
+        tile_y = travel // ts
+        if not (0 <= tile_y < scene.rows and scene.tiles[tile_y][road_tx] in (R, S, CR)):
+            continue
         lane_off = (ts // 4) if direction > 0 else (ts // 2 + 4)
         car_x = road_tx * ts - int(cx) + lane_off - cw // 2
         car_y = travel - int(cy)

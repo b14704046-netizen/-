@@ -3,6 +3,7 @@ import math
 import random
 import pygame
 import config
+import sounds
 from economy_core import EconomyState
 from entities import Player, Camera, Bullet, Enemy
 from scenes import build_all_scenes, draw_scene
@@ -16,6 +17,7 @@ from visual_fx import (
     draw_quest_log, draw_transition,
     apply_economic_tint, draw_phone,
     draw_combat_hud, draw_street_incident,
+    draw_intro, INTRO_SLIDES,
 )
 
 
@@ -53,7 +55,9 @@ def new_game():
 
 
 def main():
+    pygame.mixer.pre_init(22050, -16, 2, 512)
     pygame.init()
+    sounds.init()
     screen = pygame.display.set_mode((config.SCREEN_W, config.SCREEN_H))
     pygame.display.set_caption(config.TITLE)
     clock = pygame.time.Clock()
@@ -61,11 +65,14 @@ def main():
 
     economy, player, camera, scenes, scene, manager, quests = new_game()
 
-    state = config.STATE_MENU
+    state = config.STATE_INTRO
     prev_state = config.STATE_WORLD
     sim_timer = 0.0
     event_sel = 0
     lose_reason = None
+    intro_slide = 0
+    intro_slide_t = 0.0
+    dialog_choice_sel = 0
     dialog_pages = []
     dialog_page = 0
     current_minigame = None
@@ -76,6 +83,7 @@ def main():
     bullets = []
     enemies = []
     enemy_spawn_t = random.uniform(8.0, 14.0)
+    walk_snd_t = 0.0
 
     world_surf = pygame.Surface((config.SCREEN_W, config.SCREEN_H))
 
@@ -91,7 +99,18 @@ def main():
 
             elif ev.type == pygame.KEYDOWN:
 
-                if state == config.STATE_MENU:
+                if state == config.STATE_INTRO:
+                    if ev.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        intro_slide += 1
+                        intro_slide_t = 0.0
+                        if intro_slide >= len(INTRO_SLIDES):
+                            intro_slide = 0
+                            state = config.STATE_MENU
+                    elif ev.key == pygame.K_ESCAPE:
+                        intro_slide = 0
+                        state = config.STATE_MENU
+
+                elif state == config.STATE_MENU:
                     if ev.key == pygame.K_RETURN:
                         state = config.STATE_WORLD
 
@@ -103,7 +122,7 @@ def main():
                         if inter:
                             kind, target = inter
                             if kind == "door":
-                                # start transition
+                                sounds.play('door')
                                 target_scene = scenes[target["target"]]
                                 transition = {
                                     "t": 0.0,
@@ -114,9 +133,11 @@ def main():
                                 prev_state = state
                                 state = config.STATE_TRANSITION
                             elif kind == "npc":
+                                sounds.play('tick', 0.25)
                                 dialog_pages = get_dialog(
                                     target.dialog_id, economy)
                                 dialog_page = 0
+                                dialog_choice_sel = 0
                                 state = config.STATE_DIALOG
                                 quests.note_dialog(economy)
                             elif kind == "object":
@@ -172,6 +193,114 @@ def main():
                                     manager.post_message(
                                         f"S&P {3000 + int(economy.gdp * 50)} ({'+' if economy.gdp > 0 else ''}{economy.gdp:.1f}%)"
                                     )
+                                elif otype == "newspaper":
+                                    if economy.cpi > 8:
+                                        headline = f"頭條：通膨飆至 {economy.cpi:.1f}%！恐慌蔓延"
+                                    elif economy.unemployment > 7:
+                                        headline = f"頭條：失業率 {economy.unemployment:.1f}%，就業市場崩潰"
+                                    elif economy.cpi < 2.5 and economy.month > 4:
+                                        headline = "頭條：物價趨穩！軟著陸真的有望？"
+                                    elif economy.gdp < 0:
+                                        headline = f"頭條：GDP 負成長 {economy.gdp:.1f}%，衰退警報"
+                                    else:
+                                        headline = f"頭條：FED 利率 {economy.ffr:.2f}%，市場觀望"
+                                    manager.post_message(headline)
+                                elif otype == "atm":
+                                    balance = int(50000 * max(0.3, 1 + economy.gdp / 20))
+                                    manager.post_message(
+                                        f"帳戶餘額：${balance:,}  利息：{economy.ffr:.2f}%/年")
+                                elif otype == "graffiti":
+                                    if economy.cpi > 6:
+                                        msg = "塗鴉：「INFLATION IS THEFT」"
+                                    elif economy.unemployment > 7:
+                                        msg = "塗鴉：「NO JOBS NO PEACE」"
+                                    elif economy.approval < 30:
+                                        msg = "塗鴉：「POWELL GO HOME」"
+                                    else:
+                                        msg = "塗鴉：「Soft Landing When?」"
+                                    manager.post_message(msg)
+                                elif otype == "fridge":
+                                    egg = int(4 * (1 + economy.cpi / 5))
+                                    milk = int(3 * (1 + economy.cpi / 5))
+                                    bread = int(2 * (1 + economy.cpi / 5))
+                                    manager.post_message(
+                                        f"冰箱：雞蛋 ${egg}  牛奶 ${milk}  麵包 ${bread}")
+                                elif otype == "bulletin":
+                                    rent_hike = int(economy.cpi * 1.5)
+                                    manager.post_message(
+                                        f"公告欄：本月租金調漲 {rent_hike}%  CPI {economy.cpi:.1f}%")
+                                elif otype == "fountain_coin":
+                                    import random as _r
+                                    if _r.random() < 0.35:
+                                        economy.approval = min(100, economy.approval + 1)
+                                        manager.post_message("硬幣落入水中... 願望成真！支持度 +1 ✨")
+                                    else:
+                                        manager.post_message("硬幣沉入水底... 願望石沉大海。")
+                                elif otype == "big_board":
+                                    sp = 3000 + int(economy.gdp * 50)
+                                    bond = economy.ffr + 1.2
+                                    vix = max(10, int(30 - economy.gdp * 2 + economy.cpi))
+                                    manager.post_message(
+                                        f"S&P {sp}  |  10Y {bond:.2f}%  |  VIX {vix}")
+                                elif otype == "vend":
+                                    if player.hp < player.max_hp:
+                                        player.hp = min(player.max_hp, player.hp + 25)
+                                        cost = int(3 * (1 + economy.cpi / 10))
+                                        manager.post_message(
+                                            f"買了飲料！恢復 25 血量。花費 ${cost}")
+                                    else:
+                                        manager.post_message("血量已滿，不需要飲料。")
+                                elif otype == "workout":
+                                    economy.approval = min(100, economy.approval + 3)
+                                    player.hp = min(player.max_hp, player.hp + 10)
+                                    manager.post_message("鍛煉完成！肌肉充實。支持度 +3 💪")
+                                elif otype == "policy_memo":
+                                    taylor = (config.NEUTRAL_RATE
+                                              + economy.cpi - config.TARGET_INFLATION)
+                                    if economy.ffr > taylor + 0.5:
+                                        rec = f"建議考慮降息（Taylor {taylor:.2f}%）"
+                                    elif economy.ffr < taylor - 0.5:
+                                        rec = f"建議繼續升息（Taylor {taylor:.2f}%）"
+                                    else:
+                                        rec = f"利率大致適中（Taylor {taylor:.2f}%）"
+                                    manager.post_message(f"政策備忘錄：{rec}")
+                                elif otype == "vault":
+                                    top1 = int(10 + economy.gdp * 3 + economy.ffr * 0.5)
+                                    mid = max(20, int(60 - economy.cpi))
+                                    manager.post_message(
+                                        f"金庫報告：頂層 1% 資產佔 {top1}%，"
+                                        f"中產財富 {mid}%")
+                                elif otype == "checkup":
+                                    heal = int(40 + economy.approval / 5)
+                                    player.hp = min(player.max_hp, player.hp + heal)
+                                    manager.post_message(
+                                        f"健康檢查完成！恢復 {heal} 血量。請多休息。")
+                                elif otype == "wifi_news":
+                                    if economy.cpi > 7:
+                                        news = (f"📡 通膨 {economy.cpi:.1f}%！"
+                                                "民眾搶購囤積！")
+                                    elif economy.unemployment > 7:
+                                        news = (f"📡 失業率 {economy.unemployment:.1f}%！"
+                                                "就業市場警報！")
+                                    elif economy.gdp < 0:
+                                        news = "📡 GDP 負成長！衰退陰影籠罩市場！"
+                                    elif economy.approval > 75:
+                                        news = (f"📡 民調：Powell 支持度 "
+                                                f"{economy.approval:.0f}%！軟著陸可期？")
+                                    else:
+                                        news = (f"📡 FED 利率 {economy.ffr:.2f}%，"
+                                                "市場等待下次會議。")
+                                    manager.post_message(news)
+                                elif otype == "phone_call":
+                                    opts = [
+                                        ("財政部：支持你的政策路徑！", 3),
+                                        ("白宮：希望盡快表態降息...", 2),
+                                        ("IMF：全球對你有信心！", 4),
+                                    ]
+                                    msg, gain = random.choice(opts)
+                                    economy.approval = min(100, economy.approval + gain)
+                                    manager.post_message(
+                                        f"☎  {msg} 支持度 +{gain}")
                     elif ev.key == pygame.K_q:
                         state = config.STATE_QUEST
                     elif ev.key == pygame.K_p:
@@ -204,12 +333,49 @@ def main():
                         state = config.STATE_WORLD
 
                 elif state == config.STATE_DIALOG:
-                    if ev.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_e):
-                        dialog_page += 1
-                        if dialog_page >= len(dialog_pages):
+                    _pg = (dialog_pages[dialog_page]
+                           if 0 <= dialog_page < len(dialog_pages) else None)
+                    _is_ch = (isinstance(_pg, tuple)
+                              and _pg[0] == "__choice__")
+                    if _is_ch:
+                        _n = len(_pg[1])
+                        if ev.key in (pygame.K_UP, pygame.K_w):
+                            dialog_choice_sel = (dialog_choice_sel - 1) % _n
+                        elif ev.key in (pygame.K_DOWN, pygame.K_s):
+                            dialog_choice_sel = (dialog_choice_sel + 1) % _n
+                        elif ev.key in (pygame.K_SPACE, pygame.K_RETURN,
+                                        pygame.K_e):
+                            sounds.play('confirm')
+                            _, eff = _pg[1][dialog_choice_sel]
+                            economy.approval = max(0, min(100,
+                                economy.approval + eff.get("approval", 0)))
+                            if eff.get("ffr", 0.0) != 0.0:
+                                economy.adjust_ffr(eff["ffr"])
+                            economy.apply_shock(
+                                inf_shock=eff.get("cpi_shock", 0.0),
+                                unemp_shock=eff.get("unemp_shock", 0.0))
+                            if "heal" in eff:
+                                player.hp = min(player.max_hp,
+                                                player.hp + eff["heal"])
+                            if "msg" in eff:
+                                manager.post_message(eff["msg"])
+                            dialog_choice_sel = 0
+                            dialog_page += 1
+                            if dialog_page >= len(dialog_pages):
+                                state = config.STATE_WORLD
+                        elif ev.key == pygame.K_ESCAPE:
+                            dialog_choice_sel = 0
                             state = config.STATE_WORLD
-                    elif ev.key == pygame.K_ESCAPE:
-                        state = config.STATE_WORLD
+                    else:
+                        if ev.key in (pygame.K_SPACE, pygame.K_RETURN,
+                                      pygame.K_e):
+                            sounds.play('tick', 0.28)
+                            dialog_choice_sel = 0
+                            dialog_page += 1
+                            if dialog_page >= len(dialog_pages):
+                                state = config.STATE_WORLD
+                        elif ev.key == pygame.K_ESCAPE:
+                            state = config.STATE_WORLD
 
                 elif state == config.STATE_MINIGAME:
                     if result_screen is not None:
@@ -269,20 +435,42 @@ def main():
                     if ev.key == pygame.K_q:
                         running = False
 
-            elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1 and state == config.STATE_WORLD:
-                cx_off, cy_off = camera.offset()
-                if player.current_weapon == "pistol":
-                    b = player.shoot(ev.pos[0] + cx_off, ev.pos[1] + cy_off)
-                    if b:
-                        bullets.append(b)
-                else:
-                    player.punch(enemies)
+            elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+                if state == config.STATE_WORLD:
+                    cx_off, cy_off = camera.offset()
+                    if player.current_weapon == "pistol":
+                        b = player.shoot(ev.pos[0] + cx_off, ev.pos[1] + cy_off)
+                        if b:
+                            bullets.append(b)
+                            sounds.play('shoot', 0.40)
+                    else:
+                        player.punch(enemies)
+                elif state == config.STATE_PHONE:
+                    # 手機按鈕點擊
+                    pw_ph = 360
+                    px_ph = config.SCREEN_W // 2 - pw_ph // 2
+                    py_ph = config.SCREEN_H // 2 - 310
+                    by_ph = py_ph + 110 + 152
+                    bw_ph = (pw_ph - 50) // 4
+                    for i, delta in enumerate([-1.0, -config.FFR_STEP,
+                                               +config.FFR_STEP, +1.0]):
+                        bx_ph = px_ph + 20 + i * (bw_ph + 4)
+                        if pygame.Rect(bx_ph, by_ph, bw_ph, 56).collidepoint(ev.pos):
+                            economy.adjust_ffr(delta)
+                            break
 
         # ── Update ────────────────────────────────────────────────────
         if state == config.STATE_WORLD:
             player.update(dt, keys, scene)
             camera.update(player.x + player.w / 2,
                           player.y + player.h / 2, scene, dt)
+            moving = any(keys[k] for k in (pygame.K_w, pygame.K_s, pygame.K_a,
+                                           pygame.K_d, pygame.K_UP, pygame.K_DOWN,
+                                           pygame.K_LEFT, pygame.K_RIGHT))
+            walk_snd_t += dt
+            if moving and walk_snd_t >= 0.28:
+                walk_snd_t = 0.0
+                sounds.play('walk', 0.20)
             manager.update(dt, economy, scene)
 
             # Bullets
@@ -326,21 +514,26 @@ def main():
                 bullets.clear()
 
             if player.hp <= 0:
-                lose_reason = "你被怪人打倒了！倒在街頭..."
+                lose_reason = "combat"
                 state = config.STATE_GAMEOVER
 
             sim_timer += dt
             if sim_timer >= config.SIM_TICK_SECONDS:
                 sim_timer = 0.0
                 economy.update()
+                sounds.play('econ', 0.18)
+                player.coffee_level = max(0, player.coffee_level - 1)
                 reason = economy.lose_reason()
                 if reason:
                     lose_reason = reason
+                    sounds.play('lose')
                     state = config.STATE_GAMEOVER
                 elif economy.check_win():
+                    sounds.play('win')
                     state = config.STATE_WIN
 
             if manager.events.active_event and state == config.STATE_WORLD:
+                sounds.play('event')
                 state = config.STATE_EVENT
                 event_sel = 0
                 camera.shake(6, 0.4)
@@ -396,6 +589,15 @@ def main():
                 transition = None
                 state = config.STATE_WORLD
 
+        elif state == config.STATE_INTRO:
+            intro_slide_t += dt
+            if intro_slide_t >= INTRO_SLIDES[intro_slide]["timeout"]:
+                intro_slide += 1
+                intro_slide_t = 0.0
+                if intro_slide >= len(INTRO_SLIDES):
+                    intro_slide = 0
+                    state = config.STATE_MENU
+
         # ── Render ────────────────────────────────────────────────────
         if state == config.STATE_MENU:
             draw_menu(screen, fnt, fnt_big, fnt_s)
@@ -433,7 +635,8 @@ def main():
                 draw_event(screen, manager.events.active_event,
                            fnt, fnt_big, fnt_s, event_sel)
             elif state == config.STATE_DIALOG:
-                draw_dialog(screen, dialog_pages, dialog_page, fnt, fnt_s)
+                draw_dialog(screen, dialog_pages, dialog_page,
+                            dialog_choice_sel, fnt, fnt_s)
             elif state == config.STATE_QUEST:
                 draw_quest_log(screen, quests, fnt, fnt_big, fnt_s)
             elif state == config.STATE_TRANSITION:
@@ -457,6 +660,9 @@ def main():
         elif state == config.STATE_WIN:
             draw_win(screen, economy, fnt, fnt_big, fnt_s)
 
+        elif state == config.STATE_INTRO:
+            draw_intro(screen, intro_slide, intro_slide_t, fnt, fnt_big, fnt_s)
+
         pygame.display.flip()
 
     pygame.quit()
@@ -475,6 +681,9 @@ def _scene_label(name):
         config.SCENE_CAPITOL:     "國會山莊",
         config.SCENE_WALL_ST:     "華爾街交易所",
         config.SCENE_GYM:         "Powell Fitness",
+        config.SCENE_BANK:        "聯邦銀行",
+        config.SCENE_HOSPITAL:    "聯邦醫療中心",
+        config.SCENE_UNIVERSITY:  "聯邦經濟大學",
     }.get(name, name)
 
 

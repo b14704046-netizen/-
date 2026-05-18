@@ -312,8 +312,9 @@ def draw_gameover(surf, reason, economy, fnt, fnt_big, fnt_s):
         "inflation":    ("大通膨時代", "通膨失控——物價飛漲，民不聊生。", config.RED),
         "unemployment": ("硬著陸！",   "失業率暴增——鮑威爾被迫在街頭賣藝。", config.ORANGE),
         "approval":     ("下台吧！",   "民眾已失去信心，你被迫辭職。", config.YELLOW),
+        "combat":       ("倒在街頭！", "你被街頭怪人打倒——主席需要更多保全。", config.RED),
     }
-    title, subtitle, col = titles.get(reason, ("遊戲結束", "", config.RED))
+    title, subtitle, col = titles.get(reason, ("遊戲結束", str(reason), config.RED))
     t = fnt_big.render(title, True, col)
     surf.blit(t, (W//2 - t.get_width()//2, H//3))
     st = fnt.render(subtitle, True, config.LIGHT_GRAY)
@@ -585,6 +586,299 @@ def draw_street_incident(surf, incident, fnt, fnt_s):
     desc_s.blit(desc_t, (bw // 2 - desc_t.get_width() // 2, 0))
     desc_s.set_alpha(alpha)
     surf.blit(desc_s, (bx, by + 38))
+
+
+INTRO_SLIDES = [
+    {
+        "bg": (8, 12, 28),
+        "accent": (180, 200, 255),
+        "title": "凌晨五點，華盛頓特區",
+        "lines": [
+            "2023年9月，一個星期一的清晨。",
+            "聯準會主席 Jerome Powell 的手機震動了。",
+            "",
+            "屏幕亮起：CPI 3.2%，失業率 4.1%。",
+            "",
+            "「還沒降下來……」他喃喃自語，",
+            "瞪著天花板，徹夜未眠。",
+        ],
+        "timeout": 10.0,
+    },
+    {
+        "bg": (28, 8, 8),
+        "accent": (255, 180, 80),
+        "title": "這不只是數字",
+        "lines": [
+            "那 3.2% 背後，",
+            "是每一個去超市結帳時默默嘆氣的家庭。",
+            "",
+            "那 4.1% 背後，",
+            "是每一封寄出去等待回音的履歷。",
+            "",
+            "利率調高，企業縮編；",
+            "利率調低，通膨死灰復燃。",
+        ],
+        "timeout": 10.0,
+    },
+    {
+        "bg": (18, 8, 28),
+        "accent": (220, 80, 80),
+        "title": "所有人都盯著你",
+        "lines": [
+            "參議員呼籲：「現在就降息！」",
+            "市場喊著：「不能降，通膨還沒死！」",
+            "白宮暗示：「不要讓經濟衰退！」",
+            "教科書警告：「別重蹈1970年代的覆轍！」",
+            "",
+            "而你，只有一個工具——",
+            "聯邦基金利率（FFR）。",
+        ],
+        "timeout": 10.0,
+    },
+    {
+        "bg": (8, 20, 12),
+        "accent": (60, 220, 100),
+        "title": "軟著陸的神話",
+        "lines": [
+            "1980年代，Volcker 主席用 20% 的利率",
+            "終結了大通膨——代價是嚴峻衰退。",
+            "",
+            "你的任務，是做到前人沒做到的：",
+            "在 24 個月內，",
+            "不引發大規模失業的前提下，",
+            "把通膨壓回 2% 的目標區間。",
+        ],
+        "timeout": 10.0,
+    },
+    {
+        "bg": (8, 14, 24),
+        "accent": (255, 200, 80),
+        "title": "今天，從這裡開始",
+        "lines": [
+            "2023年9月11日，星期一。",
+            "你在公寓裡醒來。",
+            "",
+            "外面的城市正等著你——",
+            "咖啡廳、超市、公園、國會、華爾街。",
+            "每一個角落，都有你需要聽見的聲音。",
+            "",
+            "24個月。2%的目標。",
+            "一切，從這個星期一開始。",
+        ],
+        "timeout": 11.0,
+    },
+]
+
+
+def _draw_intro_visual(surf, slide_idx, t, x, y, w, h, accent, fnt, fnt_s):
+    cx, cy = x + w // 2, y + h // 2
+
+    if slide_idx == 0:
+        r = min(w // 2, h // 2) - 20
+        pygame.draw.circle(surf, (15, 20, 40), (cx, cy), r)
+        pygame.draw.circle(surf, accent, (cx, cy), r, 2)
+        for i in range(12):
+            a = i * math.pi / 6 - math.pi / 2
+            ox = cx + int(r * 0.90 * math.cos(a))
+            oy = cy + int(r * 0.90 * math.sin(a))
+            ix = cx + int(r * 0.78 * math.cos(a))
+            iy = cy + int(r * 0.78 * math.sin(a))
+            pygame.draw.line(surf, accent, (ix, iy), (ox, oy), 2)
+        ha = 5 / 6 * math.pi * 2 - math.pi / 2
+        hx = cx + int(r * 0.52 * math.cos(ha))
+        hy = cy + int(r * 0.52 * math.sin(ha))
+        pygame.draw.line(surf, config.WHITE, (cx, cy), (hx, hy), 4)
+        ma = -math.pi / 2
+        mx = cx + int(r * 0.72 * math.cos(ma))
+        my = cy + int(r * 0.72 * math.sin(ma))
+        pygame.draw.line(surf, config.WHITE, (cx, cy), (mx, my), 3)
+        sa = (t % 60) / 60 * math.pi * 2 - math.pi / 2
+        sx = cx + int(r * 0.82 * math.cos(sa))
+        sy_s = cy + int(r * 0.82 * math.sin(sa))
+        pygame.draw.line(surf, config.RED, (cx, cy), (sx, sy_s), 2)
+        pygame.draw.circle(surf, accent, (cx, cy), 5)
+        tl = fnt.render("05:00  AM", True, accent)
+        surf.blit(tl, (cx - tl.get_width() // 2, cy + r + 12))
+
+    elif slide_idx == 1:
+        bw = w // 4
+        base_y = y + h - 30
+        cpi_ratio = 0.55 + 0.12 * math.sin(t * 1.5)
+        cpi_h = int((h - 60) * cpi_ratio)
+        cpi_x = cx - bw - 12
+        pygame.draw.rect(surf, (140, 40, 40),
+                         pygame.Rect(cpi_x, base_y - cpi_h, bw, cpi_h), border_radius=3)
+        cl = fnt_s.render("CPI", True, config.WHITE)
+        vl = fnt_s.render("3.2%", True, (255, 120, 120))
+        surf.blit(cl, (cpi_x + bw // 2 - cl.get_width() // 2,
+                       base_y - cpi_h - cl.get_height() - 4))
+        surf.blit(vl, (cpi_x + bw // 2 - vl.get_width() // 2,
+                       base_y - cpi_h - vl.get_height() - cl.get_height() - 8))
+        target_y = base_y - int((h - 60) * 0.15)
+        pygame.draw.line(surf, config.GREEN,
+                         (cpi_x - 5, target_y), (cpi_x + bw + 5, target_y), 1)
+        tgt = fnt_s.render("2%", True, config.GREEN)
+        surf.blit(tgt, (cpi_x - tgt.get_width() - 4, target_y - 8))
+        un_ratio = 0.22 + 0.08 * math.cos(t * 1.2)
+        un_h = int((h - 60) * un_ratio)
+        un_x = cx + 12
+        pygame.draw.rect(surf, (40, 80, 160),
+                         pygame.Rect(un_x, base_y - un_h, bw, un_h), border_radius=3)
+        ul = fnt_s.render("失業率", True, config.WHITE)
+        uvl = fnt_s.render("4.1%", True, (100, 150, 255))
+        surf.blit(ul, (un_x + bw // 2 - ul.get_width() // 2,
+                       base_y - un_h - ul.get_height() - 4))
+        surf.blit(uvl, (un_x + bw // 2 - uvl.get_width() // 2,
+                        base_y - un_h - uvl.get_height() - ul.get_height() - 8))
+        pygame.draw.line(surf, (60, 60, 80), (x + 10, base_y), (x + w - 10, base_y), 1)
+
+    elif slide_idx == 2:
+        dirs = [
+            ("降息！",  (-1,  0), config.BLUE),
+            ("升息！",  ( 1,  0), config.RED),
+            ("別衰退！", ( 0, -1), config.YELLOW),
+            ("別通膨！", ( 0,  1), config.ORANGE),
+        ]
+        anim = 0.65 + 0.15 * math.sin(t * 2.2)
+        dist = min(w, h) // 2 - 40
+        for msg, (dx, dy), col in dirs:
+            tx = cx + int(dx * dist)
+            ty = cy + int(dy * dist)
+            ex = cx + int(dx * 38)
+            ey = cy + int(dy * 38)
+            atx = cx + int(dx * dist * anim)
+            aty = cy + int(dy * dist * anim)
+            pygame.draw.line(surf, col, (atx, aty), (ex, ey), 3)
+            ang = math.atan2(ey - aty, ex - atx)
+            for da in (0.4, -0.4):
+                hx = ex - int(16 * math.cos(ang + da))
+                hy = ey - int(16 * math.sin(ang + da))
+                pygame.draw.line(surf, col, (ex, ey), (hx, hy), 3)
+            lt = fnt_s.render(msg, True, col)
+            surf.blit(lt, (tx - lt.get_width() // 2 + int(dx * 24),
+                           ty - lt.get_height() // 2 + int(dy * 24)))
+        ft = fnt.render("FFR", True, accent)
+        surf.blit(ft, (cx - ft.get_width() // 2, cy - ft.get_height() // 2))
+
+    elif slide_idx == 3:
+        pivot_y = y + 70
+        arm = w // 2 - 20
+        tilt = math.sin(t * 0.9) * 0.22
+        pygame.draw.line(surf, accent, (cx, pivot_y), (cx, y + h - 30), 4)
+        pygame.draw.line(surf, accent,
+                         (cx - 20, y + h - 30), (cx + 20, y + h - 30), 4)
+        lx_arm = cx - int(arm * math.cos(tilt))
+        ly_arm = pivot_y + int(arm * math.sin(tilt))
+        rx_arm = cx + int(arm * math.cos(tilt))
+        ry_arm = pivot_y - int(arm * math.sin(tilt))
+        pygame.draw.line(surf, accent, (lx_arm, ly_arm), (rx_arm, ry_arm), 3)
+        pygame.draw.circle(surf, accent, (cx, pivot_y), 8)
+        pan_r = 26
+        rope_l = 50
+        lp_x, lp_y = lx_arm, ly_arm + rope_l
+        pygame.draw.line(surf, (160, 160, 160), (lx_arm, ly_arm), (lp_x, lp_y), 2)
+        pygame.draw.circle(surf, (180, 80, 60), (lp_x, lp_y + pan_r), pan_r)
+        inf_l = fnt_s.render("通膨", True, config.WHITE)
+        surf.blit(inf_l, (lp_x - inf_l.get_width() // 2, lp_y + pan_r * 2 + 6))
+        rp_x, rp_y = rx_arm, ry_arm + rope_l
+        pygame.draw.line(surf, (160, 160, 160), (rx_arm, ry_arm), (rp_x, rp_y), 2)
+        pygame.draw.circle(surf, (60, 140, 100), (rp_x, rp_y + pan_r), pan_r)
+        rec_l = fnt_s.render("衰退", True, config.WHITE)
+        surf.blit(rec_l, (rp_x - rec_l.get_width() // 2, rp_y + pan_r * 2 + 6))
+        tgt = fnt_s.render("軟著陸", True, accent)
+        surf.blit(tgt, (cx - tgt.get_width() // 2, y + h - 24))
+
+    else:
+        base_y = y + h - 20
+        sun_rise = min(1.0, t / 5.0)
+        sun_cy = base_y - 20 - int((h - 40) * 0.52 * sun_rise)
+        pygame.draw.circle(surf, (255, 180, 60), (cx, sun_cy), 35)
+        blds = [
+            (x + 10,  70, 40), (x + 58, 100, 35), (x + 101, 55, 45),
+            (x + 154, 120, 38), (x + 200, 85, 50), (x + 258, 110, 42),
+            (x + 308, 65, 55), (x + 371, 130, 36), (x + 415, 90, 48),
+        ]
+        for bx_bld, bh_bld, bw_bld in blds:
+            if bx_bld + bw_bld > x + w:
+                break
+            pygame.draw.rect(surf, (20, 25, 45),
+                             pygame.Rect(bx_bld, base_y - bh_bld, bw_bld, bh_bld))
+            for wy in range(base_y - bh_bld + 8, base_y - 8, 14):
+                for wx in range(bx_bld + 5, bx_bld + bw_bld - 5, 10):
+                    if (wx * 7 + wy * 13) % 5 != 0:
+                        lit = int(200 * sun_rise + 55)
+                        pygame.draw.rect(surf, (lit, int(lit * 0.9), 60),
+                                         pygame.Rect(wx, wy, 5, 7))
+        ml = fnt.render("星期一  早晨", True, accent)
+        surf.blit(ml, (cx - ml.get_width() // 2, base_y - ml.get_height() - 2))
+
+
+def draw_intro(surf, slide_idx, slide_t, fnt, fnt_big, fnt_s):
+    W, H = config.SCREEN_W, config.SCREEN_H
+    slide  = INTRO_SLIDES[slide_idx]
+    bg     = slide["bg"]
+    accent = slide["accent"]
+    lines  = slide["lines"]
+
+    surf.fill(bg)
+    for ly in range(0, H, 6):
+        pygame.draw.line(surf, (0, 0, 0), (0, ly), (W, ly), 1)
+
+    panel_w = W * 3 // 5
+
+    ts = fnt_big.render(slide["title"], True, accent)
+    surf.blit(ts, (60, 72))
+    pygame.draw.line(surf, accent,
+                     (60, 72 + ts.get_height() + 5),
+                     (60 + ts.get_width(), 72 + ts.get_height() + 5), 2)
+
+    TYPE_SPEED = 26
+    total_typed = int(slide_t * TYPE_SPEED)
+    chars_consumed = 0
+    all_shown = True
+    ty = 148
+    for line in lines:
+        if line == "":
+            ty += 22
+            continue
+        to_show = min(len(line), max(0, total_typed - chars_consumed))
+        if to_show > 0:
+            lt = fnt.render(line[:to_show], True, config.WHITE)
+            surf.blit(lt, (60, ty))
+            if to_show < len(line):
+                cx_cur = 60 + lt.get_width() + 3
+                if (pygame.time.get_ticks() // 260) % 2 == 0:
+                    pygame.draw.rect(surf, accent,
+                                     pygame.Rect(cx_cur, ty + 3, 10, fnt.get_height() - 6))
+                all_shown = False
+        else:
+            all_shown = False
+        chars_consumed += len(line)
+        ty += 36
+
+    rp_x = panel_w + 20
+    rp_y = 60
+    rp_w = W - panel_w - 40
+    rp_h = H - 120
+    _draw_intro_visual(surf, slide_idx, slide_t, rp_x, rp_y, rp_w, rp_h, accent, fnt, fnt_s)
+
+    show_hint = all_shown or slide_t > 4.5
+    if show_hint and (pygame.time.get_ticks() // 520) % 2 == 0:
+        is_last = slide_idx >= len(INTRO_SLIDES) - 1
+        hint_str = "[ ENTER / SPACE ]  開始遊戲" if is_last else "[ ENTER / SPACE ]  繼續"
+        ht = fnt_s.render(hint_str, True, accent)
+        surf.blit(ht, (W // 2 - ht.get_width() // 2, H - 70))
+
+    skip = fnt_s.render("[ ESC ]  跳至主選單", True, (80, 80, 100))
+    surf.blit(skip, (W - skip.get_width() - 20, H - 30))
+
+    n = len(INTRO_SLIDES)
+    dot_cx = W // 2
+    for i in range(n):
+        dx = dot_cx - (n - 1) * 12 + i * 24
+        r = 7 if i == slide_idx else 4
+        c = accent if i == slide_idx else (50, 50, 70)
+        pygame.draw.circle(surf, c, (dx, H - 44), r)
 
 
 def apply_economic_tint(surf, economy):

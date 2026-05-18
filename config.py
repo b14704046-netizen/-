@@ -58,6 +58,7 @@ STATE_WIN = "win"
 STATE_QUEST = "quest"
 STATE_TRANSITION = "transition"
 STATE_PHONE = "phone"
+STATE_INTRO = "intro"
 
 # Scenes
 SCENE_CITY = "city"
@@ -70,6 +71,9 @@ SCENE_PRESS = "press"
 SCENE_CAPITOL = "capitol"
 SCENE_WALL_ST = "wall_st"
 SCENE_GYM = "gym"
+SCENE_BANK = "bank"
+SCENE_HOSPITAL = "hospital"
+SCENE_UNIVERSITY = "university"
 
 # Mini-games
 MG_COFFEE = "coffee"

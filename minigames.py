@@ -391,7 +391,7 @@ class PigeonGame(MiniGame):
 
         # Catch zone hint
         zone_y = int(H * 0.7)
-        pygame.draw.line(surf, (255, 255, 255, 100), (0, zone_y), (W, zone_y), 1)
+        pygame.draw.line(surf, (180, 200, 180), (0, zone_y), (W, zone_y), 1)
 
         if self._feedback_t > 0:
             t = fnt_big.render(self._feedback, True, (40, 120, 40))
