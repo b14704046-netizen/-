@@ -21,7 +21,7 @@ def _bar(surf, x, y, w, h, value, vmin, vmax, good_range, colors, label, fnt):
 
 
 def draw_sparkline(surf, history, key, x, y, w, h, col):
-    vals = [s[key] for s in history[-20:]]
+    vals = [s[key] for s in history[-20:] if key in s]
     if len(vals) < 2: return
     mn, mx = min(vals) - 0.5, max(vals) + 0.5
     if mx == mn: return
@@ -51,6 +51,7 @@ def draw_terminal(surf, economy, fnt, fnt_big, fnt_s, tick_progress):
     mt = fnt.render(month_str, True, config.TERMINAL_AMBER)
     surf.blit(mt, (W - mt.get_width() - 20, 14))
 
+    # ── 左側面板：FFR 控制 ────────────────────────────────────────────────────
     panel_x, panel_y = 30, 70
     pygame.draw.rect(surf, (12, 28, 44), pygame.Rect(panel_x, panel_y, 340, 260), border_radius=6)
     pygame.draw.rect(surf, config.TERMINAL_DIM, pygame.Rect(panel_x, panel_y, 340, 260), border_radius=6, width=1)
@@ -61,7 +62,7 @@ def draw_terminal(surf, economy, fnt, fnt_big, fnt_s, tick_progress):
     ffr_display = fnt_big.render(f"{snap['ffr']:.2f} %", True, config.TERMINAL_GREEN)
     surf.blit(ffr_display, (panel_x + 14, panel_y + 40))
 
-    hint = fnt_s.render("[ ↑/↓ ] 調整  [ +/- ] 快速  [ Enter ] 返回", True, config.TERMINAL_DIM)
+    hint = fnt_s.render("[ ↑/↓ ] 調整 FFR  [ +/- ] 快速  [ [ / ] ] QT / QE", True, config.TERMINAL_DIM)
     surf.blit(hint, (panel_x + 14, panel_y + 110))
 
     _bar(surf, panel_x+14, panel_y+165, 308, 20,
@@ -77,6 +78,36 @@ def draw_terminal(surf, economy, fnt, fnt_big, fnt_s, tick_progress):
     tt = fnt_s.render("▲ 調升利率 = 壓制通膨，代價是失業率上升", True, (80,120,80))
     surf.blit(tt, (panel_x+14, panel_y + 225))
 
+    # ── 左側面板：QE/QT 控制（新增）─────────────────────────────────────────
+    qp_y = panel_y + 272
+    pygame.draw.rect(surf, (10, 22, 40), pygame.Rect(panel_x, qp_y, 340, 180), border_radius=6)
+    pygame.draw.rect(surf, (40, 80, 130), pygame.Rect(panel_x, qp_y, 340, 180), border_radius=6, width=1)
+
+    qt_title = fnt.render("[ 資產負債表 QE / QT ]", True, (100, 180, 255))
+    surf.blit(qt_title, (panel_x + 14, qp_y + 10))
+
+    bs_val = snap.get("balance_sheet", 8.5)
+    sr_val = snap.get("shadow_rate", snap["ffr"])
+    bs_lbl, bs_col = economy.bs_label()
+
+    bs_big = fnt_big.render(f"${bs_val:.1f}T", True, (100, 220, 255))
+    surf.blit(bs_big, (panel_x + 14, qp_y + 38))
+
+    bs_tag = fnt_s.render(bs_lbl, True, bs_col)
+    surf.blit(bs_tag, (panel_x + 14 + bs_big.get_width() + 10, qp_y + 54))
+
+    sr_t = fnt_s.render(f"影子利率：{sr_val:.2f}%", True, config.TERMINAL_DIM)
+    surf.blit(sr_t, (panel_x + 14, qp_y + 90))
+
+    _bar(surf, panel_x+14, qp_y+130, 308, 14,
+         bs_val, 2.0, 15.0, (4.0, 9.0),
+         [(80,160,255), config.YELLOW, config.ORANGE],
+         "BS($T)", fnt_s)
+
+    qt_hint = fnt_s.render("[ [ ] QT 縮表  /  [ ] ] QE 擴表  每次 $0.1T", True, (60, 100, 160))
+    surf.blit(qt_hint, (panel_x + 14, qp_y + 156))
+
+    # ── 中間四個指標面板 ──────────────────────────────────────────────────────
     ix = 390
     indicators = [
         ("通膨率 (CPI)",  snap["cpi"],          0, 20, (0.5, 4.0)),
@@ -95,6 +126,28 @@ def draw_terminal(surf, economy, fnt, fnt_big, fnt_s, tick_progress):
         vt = fnt.render(f"{actual:.1f}", True, config.TERMINAL_GREEN)
         surf.blit(vt, (ix + 14, iy + 8))
 
+    # ── 中間：通膨預期 + 信用利差（新增）────────────────────────────────────
+    ie_val = snap.get("inf_exp", 2.5)
+    cs_val = snap.get("credit_spread", 1.5)
+    ie_lbl, ie_col = economy.inf_exp_label()
+
+    extra_panels = [
+        ("通膨預期",  ie_val, 0, 10, (1.5, 3.0), ie_lbl, ie_col),
+        ("信用利差",  cs_val, 0,  8, (0.5, 2.5), "", config.TERMINAL_DIM),
+    ]
+    for i, (label, val, vmin, vmax, good, tag, tag_col) in enumerate(extra_panels):
+        iy = 70 + (i + 4) * 90
+        pygame.draw.rect(surf, (10, 24, 40), pygame.Rect(ix, iy, 360, 75), border_radius=6)
+        pygame.draw.rect(surf, (40, 70, 110), pygame.Rect(ix, iy, 360, 75), border_radius=6, width=1)
+        _bar(surf, ix+14, iy+44, 330, 14, val, vmin, vmax, good,
+             [(80,160,255), config.YELLOW, config.RED], label, fnt_s)
+        vt = fnt.render(f"{val:.2f}", True, (100, 200, 255))
+        surf.blit(vt, (ix + 14, iy + 8))
+        if tag:
+            tg = fnt_s.render(tag, True, tag_col)
+            surf.blit(tg, (ix + 14 + vt.get_width() + 8, iy + 14))
+
+    # ── 右側歷史走勢圖 ────────────────────────────────────────────────────────
     chart_x, chart_y, chart_w, chart_h = 770, 70, 480, 280
     pygame.draw.rect(surf, (8, 20, 34), pygame.Rect(chart_x, chart_y, chart_w, chart_h), border_radius=6)
     pygame.draw.rect(surf, config.TERMINAL_DIM, pygame.Rect(chart_x, chart_y, chart_w, chart_h), border_radius=6, width=1)
@@ -118,29 +171,62 @@ def draw_terminal(surf, economy, fnt, fnt_big, fnt_s, tick_progress):
                    chart_x+10, chart_y+30, chart_w-20, chart_h-40, config.GREEN)
     draw_sparkline(surf, economy.history, "approval",
                    chart_x+10, chart_y+30, chart_w-20, chart_h-40, config.PURPLE)
+    # 新增：資產負債表走勢
+    draw_sparkline(surf, economy.history, "balance_sheet",
+                   chart_x+10, chart_y+30, chart_w-20, chart_h-40, (100, 200, 255))
 
     for col, label, ly in [
-        (config.ORANGE, "CPI 通膨率",  chart_y+chart_h-72),
-        (config.BLUE,   "失業率",      chart_y+chart_h-55),
-        (config.YELLOW, "FFR 利率",    chart_y+chart_h-38),
-        (config.GREEN,  "GDP 成長",    chart_y+chart_h-21),
-        (config.PURPLE, "支持度",      chart_y+chart_h-4),
+        (config.ORANGE,    "CPI 通膨率",    chart_y+chart_h-88),
+        (config.BLUE,      "失業率",        chart_y+chart_h-72),
+        (config.YELLOW,    "FFR 利率",      chart_y+chart_h-55),
+        (config.GREEN,     "GDP 成長",      chart_y+chart_h-38),
+        (config.PURPLE,    "支持度",        chart_y+chart_h-21),
+        ((100, 200, 255),  "資產負債表",    chart_y+chart_h-4),
     ]:
         pygame.draw.rect(surf, col, pygame.Rect(chart_x+10, ly+4, 16, 10))
         lt = fnt_s.render(label, True, config.LIGHT_GRAY)
         surf.blit(lt, (chart_x+32, ly))
 
+    # ── 右側：通膨預期走勢圖（新增）─────────────────────────────────────────
+    chart2_y = chart_y + chart_h + 16
+    chart2_h = 120
+    pygame.draw.rect(surf, (8, 18, 32), pygame.Rect(chart_x, chart2_y, chart_w, chart2_h), border_radius=6)
+    pygame.draw.rect(surf, (40, 70, 110), pygame.Rect(chart_x, chart2_y, chart_w, chart2_h), border_radius=6, width=1)
+    ct2 = fnt_s.render("[ 通膨預期 & 信用利差 走勢 ]", True, (80, 140, 200))
+    surf.blit(ct2, (chart_x + 10, chart2_y + 6))
+    draw_sparkline(surf, economy.history, "inf_exp",
+                   chart_x+10, chart2_y+24, chart_w-20, chart2_h-34, (255, 160, 60))
+    draw_sparkline(surf, economy.history, "credit_spread",
+                   chart_x+10, chart2_y+24, chart_w-20, chart2_h-34, (180, 80, 220))
+    for col, label, lx in [
+        ((255, 160, 60),  "通膨預期", chart_x + 10),
+        ((180, 80, 220),  "信用利差", chart_x + 120),
+    ]:
+        pygame.draw.rect(surf, col, pygame.Rect(lx, chart2_y + chart2_h - 14, 14, 8))
+        lt = fnt_s.render(label, True, config.LIGHT_GRAY)
+        surf.blit(lt, (lx + 18, chart2_y + chart2_h - 16))
+
+    # ── 底部狀態列 ────────────────────────────────────────────────────────────
     bar_y = H - 36
     pygame.draw.rect(surf, (15, 30, 45), pygame.Rect(0, bar_y-2, W, 38))
     pygame.draw.line(surf, config.TERMINAL_DIM, (0, bar_y-2), (W, bar_y-2), 1)
     tw = int(W * tick_progress)
     pygame.draw.rect(surf, (0, 60, 30), pygame.Rect(0, bar_y+4, tw, 22), border_radius=2)
+
     pt = fnt_s.render("下一個月：", True, config.TERMINAL_DIM)
     surf.blit(pt, (8, bar_y + 8))
 
     taylor = config.NEUTRAL_RATE + snap["cpi"] - config.TARGET_INFLATION
     rec = fnt_s.render(f"泰勒規則建議利率：{taylor:.2f}%", True, config.TERMINAL_DIM)
     surf.blit(rec, (W//2 - rec.get_width()//2, bar_y + 8))
+
+    # QE/QT 狀態摘要（右側，新增）
+    qe_str = (f"BS: ${bs_val:.1f}T   "
+              f"影子利率: {sr_val:.2f}%   "
+              f"通膨預期: {ie_val:.1f}%   "
+              f"信用利差: {cs_val:.2f}%")
+    qt_bar = fnt_s.render(qe_str, True, (80, 140, 200))
+    surf.blit(qt_bar, (W - qt_bar.get_width() - 12, bar_y + 8))
 
 
 def draw_hud(surf, economy, fnt_s, scene_name, near_interaction, quest_log):
@@ -156,6 +242,7 @@ def draw_hud(surf, economy, fnt_s, scene_name, near_interaction, quest_log):
         (f"📈 CPI: {snap['cpi']:.1f}%  {inf_label}", inf_col),
         (f"💼 失業: {snap['unemployment']:.1f}%  {unemp_label}", unemp_col),
         (f"💰 利率: {snap['ffr']:.2f}%", config.TERMINAL_AMBER),
+        (f"🏦 BS: ${snap.get('balance_sheet', 8.5):.1f}T", (100, 180, 255)),
         (f"❤ 支持度: {snap['approval']:.0f}%", config.GREEN if snap['approval'] > 40 else config.RED),
     ]
     for i, (text, col) in enumerate(panels):
@@ -209,7 +296,6 @@ def draw_combat_hud(surf, player, fnt_s):
     H = config.SCREEN_H
     bx, by = 20, H - 88
 
-    # HP bar
     hp_ratio = player.hp / player.max_hp
     hp_col = (220, 60, 60) if hp_ratio > 0.4 else (255, 100, 40) if hp_ratio > 0.2 else (255, 30, 30)
     ht = fnt_s.render(f"HP  {player.hp}/{player.max_hp}", True, config.WHITE)
@@ -223,13 +309,11 @@ def draw_combat_hud(surf, player, fnt_s):
     pygame.draw.rect(surf, hp_col,      pygame.Rect(bx, by2, int(bw * hp_ratio), 8))
     pygame.draw.rect(surf, (180, 0, 0), pygame.Rect(bx, by2, bw, 8), width=1)
 
-    # Stamina bar
     st_ratio = player.stamina / player.max_stamina
     st_col = (160, 220, 50) if st_ratio > 0.3 else (255, 180, 0)
     pygame.draw.rect(surf, (40, 50, 0),  pygame.Rect(bx, by2 + 12, bw, 5))
     pygame.draw.rect(surf, st_col,       pygame.Rect(bx, by2 + 12, int(bw * st_ratio), 5))
 
-    # Weapon + ammo
     wpn = player.current_weapon
     if wpn == "fist":
         wlabel = "[Tab] 拳頭"
@@ -309,10 +393,11 @@ def draw_gameover(surf, reason, economy, fnt, fnt_big, fnt_s):
     snap = economy.snapshot()
     surf.fill((12, 5, 8))
     titles = {
-        "inflation":    ("大通膨時代", "通膨失控——物價飛漲，民不聊生。", config.RED),
-        "unemployment": ("硬著陸！",   "失業率暴增——鮑威爾被迫在街頭賣藝。", config.ORANGE),
-        "approval":     ("下台吧！",   "民眾已失去信心，你被迫辭職。", config.YELLOW),
-        "combat":       ("倒在街頭！", "你被街頭怪人打倒——主席需要更多保全。", config.RED),
+        "inflation":              ("大通膨時代",   "通膨失控——物價飛漲，民不聊生。",             config.RED),
+        "unemployment":           ("硬著陸！",     "失業率暴增——鮑威爾被迫在街頭賣藝。",         config.ORANGE),
+        "approval":               ("下台吧！",     "民眾已失去信心，你被迫辭職。",               config.YELLOW),
+        "combat":                 ("倒在街頭！",   "你被街頭怪人打倒——主席需要更多保全。",       config.RED),
+        "inflation_expectations": ("預期失控！",   "通膨預期嚴重去錨，市場信心崩潰，無力回天。", config.ORANGE),
     }
     title, subtitle, col = titles.get(reason, ("遊戲結束", str(reason), config.RED))
     t = fnt_big.render(title, True, col)
@@ -320,15 +405,19 @@ def draw_gameover(surf, reason, economy, fnt, fnt_big, fnt_s):
     st = fnt.render(subtitle, True, config.LIGHT_GRAY)
     surf.blit(st, (W//2 - st.get_width()//2, H//3 + 80))
 
+    bs_val = snap.get("balance_sheet", 8.5)
+    ie_val = snap.get("inf_exp", 2.5)
     stats = [
         f"最終通膨率：{snap['cpi']:.1f}%",
         f"最終失業率：{snap['unemployment']:.1f}%",
         f"在位月數：{snap['month']} 個月",
         f"最終支持度：{snap['approval']:.0f}%",
+        f"最終資產負債表：${bs_val:.1f}T",
+        f"最終通膨預期：{ie_val:.1f}%",
     ]
     for i, s in enumerate(stats):
         st = fnt_s.render(s, True, config.GRAY)
-        surf.blit(st, (W//2 - st.get_width()//2, H//2 + 20 + i * 30))
+        surf.blit(st, (W//2 - st.get_width()//2, H//2 + 20 + i * 28))
 
     r = fnt_s.render("[ R ] 重新開始   [ Q ] 退出", True, config.TERMINAL_DIM)
     surf.blit(r, (W//2 - r.get_width()//2, H - 80))
@@ -354,15 +443,17 @@ def draw_win(surf, economy, fnt, fnt_big, fnt_s):
     dove = fnt_big.render("🕊  鮑威爾在公園安詳地餵鴿子  🕊", True, config.TERMINAL_GREEN)
     surf.blit(dove, (W//2 - dove.get_width()//2, H//2 - 30))
 
+    bs_val = snap.get("balance_sheet", 8.5)
     stats = [
         f"最終通膨率：{snap['cpi']:.1f}%  ✓",
         f"最終失業率：{snap['unemployment']:.1f}%",
         f"在位月數：{snap['month']} 個月",
         f"最終支持度：{snap['approval']:.0f}%",
+        f"最終資產負債表：${bs_val:.1f}T",
     ]
     for i, s in enumerate(stats):
         st = fnt_s.render(s, True, config.GREEN)
-        surf.blit(st, (W//2 - st.get_width()//2, H//2 + 60 + i * 30))
+        surf.blit(st, (W//2 - st.get_width()//2, H//2 + 60 + i * 28))
 
     r = fnt_s.render("[ R ] 重新開始   [ Q ] 退出", True, config.TERMINAL_DIM)
     surf.blit(r, (W//2 - r.get_width()//2, H - 80))
@@ -389,11 +480,11 @@ def draw_menu(surf, fnt, fnt_big, fnt_s):
     lines = [
         "你是聯準會主席 Jerome Powell。",
         "走進整座華盛頓城——咖啡廳、超市、公園、國會、華爾街、新聞室。",
-        "和民眾對話、玩小遊戲、處理黑天鵝事件，用利率政策拯救經濟。",
+        "和民眾對話、玩小遊戲、處理黑天鵝事件，用利率與QE政策拯救經濟。",
         "",
         "WASD / 方向鍵：移動",
         "E：互動（門/NPC/物件）",
-        "P：開啟手機（隨時隨地調整利率）",
+        "P：開啟手機（隨時隨地調整利率與資產負債表）",
         "Q：開啟任務日誌",
         "SPACE / Enter：對話、確認    ESC：取消",
         "目標：24個月內讓CPI穩定在2%附近",
@@ -440,7 +531,6 @@ def draw_quest_log(surf, quest_log, fnt, fnt_big, fnt_s):
 
 
 def draw_transition(surf, progress, target_label, fnt_big):
-    """Fade-to-black transition."""
     W, H = config.SCREEN_W, config.SCREEN_H
     alpha = int(min(255, abs(progress - 0.5) * -510 + 255))
     overlay = pygame.Surface((W, H))
@@ -453,29 +543,26 @@ def draw_transition(surf, progress, target_label, fnt_big):
 
 
 def draw_phone(surf, economy, fnt, fnt_big, fnt_s):
-    """Draw a smartphone-style FFR control overlay. World stays visible."""
+    """手機介面：FFR 控制 + QE/QT 資產負債表控制"""
     W, H = config.SCREEN_W, config.SCREEN_H
     snap = economy.snapshot()
 
-    # Dim background slightly
     dim = pygame.Surface((W, H), pygame.SRCALPHA)
     dim.fill((0, 0, 0, 100))
     surf.blit(dim, (0, 0))
 
-    # Phone body (centered, portrait orientation)
-    pw, ph = 360, 620
+    # ── 手機外殼（加高以容納 QE/QT 區塊）────────────────────────────────────
+    pw, ph = 360, 760
     px, py = W//2 - pw//2, H//2 - ph//2
 
-    # Outer phone body
     pygame.draw.rect(surf, (25, 25, 30), pygame.Rect(px-8, py-8, pw+16, ph+16), border_radius=32)
     pygame.draw.rect(surf, (50, 50, 55), pygame.Rect(px-8, py-8, pw+16, ph+16), border_radius=32, width=2)
-    # Speaker
     pygame.draw.rect(surf, (15, 15, 18), pygame.Rect(px + pw//2 - 30, py - 2, 60, 4), border_radius=2)
 
-    # Screen
+    # ── 螢幕 ─────────────────────────────────────────────────────────────────
     pygame.draw.rect(surf, (12, 18, 28), pygame.Rect(px, py, pw, ph), border_radius=18)
 
-    # Status bar
+    # 狀態列
     pygame.draw.rect(surf, (8, 12, 20), pygame.Rect(px, py, pw, 28))
     import datetime as _dt
     t_str = _dt.datetime.now().strftime("%H:%M")
@@ -484,80 +571,116 @@ def draw_phone(surf, economy, fnt, fnt_big, fnt_s):
     bat = fnt_s.render("📶 5G   🔋", True, config.TERMINAL_GREEN)
     surf.blit(bat, (px + pw - bat.get_width() - 14, py + 6))
 
-    # App header
+    # App 標頭
     pygame.draw.rect(surf, (20, 28, 44), pygame.Rect(px, py + 28, pw, 56))
     app = fnt.render("📱 FED Mobile", True, config.TERMINAL_AMBER)
     surf.blit(app, (px + pw//2 - app.get_width()//2, py + 40))
-    sub = fnt_s.render("聯邦基金利率控制", True, config.TERMINAL_DIM)
+    sub = fnt_s.render("聯準會政策控制中心", True, config.TERMINAL_DIM)
     surf.blit(sub, (px + pw//2 - sub.get_width()//2, py + 64))
 
-    # Big FFR display
+    # ── FFR 大數字顯示 ────────────────────────────────────────────────────────
     cy = py + 110
     pygame.draw.rect(surf, (8, 18, 30), pygame.Rect(px + 20, cy, pw - 40, 130), border_radius=10)
     pygame.draw.rect(surf, config.TERMINAL_DIM, pygame.Rect(px + 20, cy, pw - 40, 130), border_radius=10, width=1)
-    label = fnt_s.render("FFR", True, config.TERMINAL_DIM)
+    label = fnt_s.render("FFR  聯邦基金利率", True, config.TERMINAL_DIM)
     surf.blit(label, (px + 36, cy + 10))
     ffr_txt = fnt_big.render(f"{snap['ffr']:.2f}", True, config.TERMINAL_GREEN)
     surf.blit(ffr_txt, (px + pw//2 - ffr_txt.get_width()//2, cy + 36))
     pct = fnt.render("%", True, config.TERMINAL_GREEN)
     surf.blit(pct, (px + pw//2 + ffr_txt.get_width()//2 + 4, cy + 56))
     taylor = config.NEUTRAL_RATE + snap["cpi"] - config.TARGET_INFLATION
-    rec = fnt_s.render(f"建議：{taylor:.2f}%", True, config.TERMINAL_AMBER)
+    rec = fnt_s.render(f"泰勒規則建議：{taylor:.2f}%", True, config.TERMINAL_AMBER)
     surf.blit(rec, (px + pw//2 - rec.get_width()//2, cy + 96))
 
-    # Buttons row
-    by = cy + 152
+    # FFR 按鈕列
+    ffr_by = cy + 152
     for i, (label_txt, key_hint) in enumerate([
         ("－1.0", "—"), ("－", "↓"), ("＋", "↑"), ("＋1.0", "+"),
     ]):
-        bw = (pw - 50) // 4
-        bx = px + 20 + i * (bw + 4)
+        bw_btn = (pw - 50) // 4
+        bx_btn = px + 20 + i * (bw_btn + 4)
         col = (60, 100, 60) if i >= 2 else (100, 60, 60)
-        pygame.draw.rect(surf, col, pygame.Rect(bx, by, bw, 56), border_radius=8)
-        pygame.draw.rect(surf, config.TERMINAL_DIM, pygame.Rect(bx, by, bw, 56), border_radius=8, width=1)
+        pygame.draw.rect(surf, col, pygame.Rect(bx_btn, ffr_by, bw_btn, 56), border_radius=8)
+        pygame.draw.rect(surf, config.TERMINAL_DIM, pygame.Rect(bx_btn, ffr_by, bw_btn, 56), border_radius=8, width=1)
         lt = fnt.render(label_txt, True, config.WHITE)
-        surf.blit(lt, (bx + bw//2 - lt.get_width()//2, by + 8))
+        surf.blit(lt, (bx_btn + bw_btn//2 - lt.get_width()//2, ffr_by + 8))
         kt = fnt_s.render(f"[{key_hint}]", True, config.LIGHT_GRAY)
-        surf.blit(kt, (bx + bw//2 - kt.get_width()//2, by + 34))
+        surf.blit(kt, (bx_btn + bw_btn//2 - kt.get_width()//2, ffr_by + 34))
 
-    # Mini stats
-    sy = by + 78
-    pygame.draw.rect(surf, (8, 18, 30), pygame.Rect(px + 20, sy, pw - 40, 130), border_radius=10)
-    pygame.draw.rect(surf, config.TERMINAL_DIM, pygame.Rect(px + 20, sy, pw - 40, 130), border_radius=10, width=1)
-    h = fnt_s.render("即時指標", True, config.TERMINAL_AMBER)
-    surf.blit(h, (px + 30, sy + 8))
+    # ── QE / QT 區塊（新增）────────────────────────────────────────────────
+    qy = ffr_by + 72
+    pygame.draw.rect(surf, (10, 20, 38), pygame.Rect(px + 20, qy, pw - 40, 152), border_radius=10)
+    pygame.draw.rect(surf, (40, 80, 130), pygame.Rect(px + 20, qy, pw - 40, 152), border_radius=10, width=1)
+
+    qh = fnt_s.render("資產負債表規模  QE / QT", True, (100, 180, 255))
+    surf.blit(qh, (px + pw//2 - qh.get_width()//2, qy + 8))
+
+    bs_val = snap.get("balance_sheet", 8.5)
+    sr_val = snap.get("shadow_rate", snap["ffr"])
+    bs_lbl, bs_col = economy.bs_label()
+
+    bs_big = fnt_big.render(f"${bs_val:.1f}T", True, (100, 220, 255))
+    surf.blit(bs_big, (px + pw//2 - bs_big.get_width()//2, qy + 28))
+
+    bs_tag = fnt_s.render(bs_lbl, True, bs_col)
+    surf.blit(bs_tag, (px + pw//2 - bs_tag.get_width()//2, qy + 66))
+
+    # 影子利率 & 通膨預期小字
+    ie_val = snap.get("inf_exp", 2.5)
+    ie_lbl, ie_col = economy.inf_exp_label()
+    sr_t = fnt_s.render(f"影子利率：{sr_val:.2f}%", True, config.TERMINAL_DIM)
+    ie_t = fnt_s.render(f"通膨預期：{ie_val:.1f}%  {ie_lbl}", True, ie_col)
+    surf.blit(sr_t, (px + 30, qy + 86))
+    surf.blit(ie_t, (px + pw - 30 - ie_t.get_width(), qy + 86))
+
+    # QT / QE 兩個大按鈕
+    qbw = (pw - 50) // 2
+    qb_y = qy + 108
+    for i, (label_txt, border_col, btn_col) in enumerate([
+        ("QT  縮表  [  [  ]", (180, 80, 80),  (80, 40, 40)),
+        ("QE  擴表  [  ]  ]", (60, 180, 100), (30, 80, 50)),
+    ]):
+        bx_q = px + 20 + i * (qbw + 10)
+        pygame.draw.rect(surf, btn_col,    pygame.Rect(bx_q, qb_y, qbw, 36), border_radius=8)
+        pygame.draw.rect(surf, border_col, pygame.Rect(bx_q, qb_y, qbw, 36), border_radius=8, width=1)
+        lt = fnt_s.render(label_txt, True, config.WHITE)
+        surf.blit(lt, (bx_q + qbw//2 - lt.get_width()//2, qb_y + 10))
+
+    # ── 即時指標面板 ──────────────────────────────────────────────────────────
+    sy = qy + 162
+    pygame.draw.rect(surf, (8, 18, 30), pygame.Rect(px + 20, sy, pw - 40, 110), border_radius=10)
+    pygame.draw.rect(surf, config.TERMINAL_DIM, pygame.Rect(px + 20, sy, pw - 40, 110), border_radius=10, width=1)
+    h_lbl = fnt_s.render("即時指標", True, config.TERMINAL_AMBER)
+    surf.blit(h_lbl, (px + 30, sy + 8))
 
     inf_lbl, inf_c = economy.inflation_label()
     un_lbl,  un_c  = economy.unemp_label()
     rows = [
-        ("通膨 CPI",    f"{snap['cpi']:.1f}%  {inf_lbl}",   inf_c),
-        ("失業率",      f"{snap['unemployment']:.1f}%  {un_lbl}", un_c),
-        ("支持度",      f"{snap['approval']:.0f}%",           config.GREEN if snap['approval']>40 else config.RED),
-        ("第幾個月",    f"{snap['month']} / {config.WIN_MONTHS}", config.LIGHT_GRAY),
+        ("通膨 CPI",  f"{snap['cpi']:.1f}%  {inf_lbl}",        inf_c),
+        ("失業率",    f"{snap['unemployment']:.1f}%  {un_lbl}", un_c),
+        ("GDP",       f"{snap['gdp']:.1f}%",                    config.GREEN if snap['gdp'] > 0 else config.RED),
+        ("支持度",    f"{snap['approval']:.0f}%",               config.GREEN if snap['approval'] > 40 else config.RED),
+        ("第幾個月",  f"{snap['month']} / {config.WIN_MONTHS}", config.LIGHT_GRAY),
     ]
     for i, (k, v, c) in enumerate(rows):
         kt = fnt_s.render(k, True, config.TERMINAL_DIM)
         vt = fnt_s.render(v, True, c)
-        ry = sy + 32 + i * 24
+        ry = sy + 28 + i * 18
         surf.blit(kt, (px + 30, ry))
         surf.blit(vt, (px + pw - 30 - vt.get_width(), ry))
 
-    # Close hint
+    # ── 關閉提示 & Home bar ───────────────────────────────────────────────────
     hint = fnt_s.render("[ P / ESC ] 收起手機", True, config.TERMINAL_DIM)
     surf.blit(hint, (px + pw//2 - hint.get_width()//2, py + ph - 26))
-
-    # Home button
     pygame.draw.rect(surf, (40, 40, 50), pygame.Rect(px + pw//2 - 30, py + ph - 4, 60, 4), border_radius=2)
 
 
 def draw_street_incident(surf, incident, fnt, fnt_s):
-    """底部 toast 通知，顯示非阻斷式街頭突發事件。"""
     if not incident:
         return
     W = config.SCREEN_W
     t = incident["t"]
     duration = incident.get("duration", 8.0)
-    # 淡入淡出
     fade = min(1.0, min(t, duration - t) * 2.0)
     alpha = int(fade * 210)
 
@@ -569,7 +692,6 @@ def draw_street_incident(surf, incident, fnt, fnt_s):
     bg.fill((10, 18, 30, alpha))
     surf.blit(bg, (bx, by))
 
-    border_col = (*config.TERMINAL_AMBER, alpha)
     border_surf = pygame.Surface((bw, bh), pygame.SRCALPHA)
     pygame.draw.rect(border_surf, (255, 180, 0, alpha),
                      pygame.Rect(0, 0, bw, bh), border_radius=8, width=2)
@@ -630,8 +752,8 @@ INTRO_SLIDES = [
             "白宮暗示：「不要讓經濟衰退！」",
             "教科書警告：「別重蹈1970年代的覆轍！」",
             "",
-            "而你，只有一個工具——",
-            "聯邦基金利率（FFR）。",
+            "而你，有兩個工具——",
+            "聯邦基金利率（FFR）與資產負債表（QE/QT）。",
         ],
         "timeout": 10.0,
     },
@@ -734,8 +856,8 @@ def _draw_intro_visual(surf, slide_idx, t, x, y, w, h, accent, fnt, fnt_s):
 
     elif slide_idx == 2:
         dirs = [
-            ("降息！",  (-1,  0), config.BLUE),
-            ("升息！",  ( 1,  0), config.RED),
+            ("降息！",   (-1,  0), config.BLUE),
+            ("升息！",   ( 1,  0), config.RED),
             ("別衰退！", ( 0, -1), config.YELLOW),
             ("別通膨！", ( 0,  1), config.ORANGE),
         ]
@@ -757,7 +879,7 @@ def _draw_intro_visual(surf, slide_idx, t, x, y, w, h, accent, fnt, fnt_s):
             lt = fnt_s.render(msg, True, col)
             surf.blit(lt, (tx - lt.get_width() // 2 + int(dx * 24),
                            ty - lt.get_height() // 2 + int(dy * 24)))
-        ft = fnt.render("FFR", True, accent)
+        ft = fnt.render("FFR+QE", True, accent)
         surf.blit(ft, (cx - ft.get_width() // 2, cy - ft.get_height() // 2))
 
     elif slide_idx == 3:
@@ -882,7 +1004,6 @@ def draw_intro(surf, slide_idx, slide_t, fnt, fnt_big, fnt_s):
 
 
 def apply_economic_tint(surf, economy):
-    """Visual filter based on economy state."""
     if economy.cpi > 6:
         tint = min(120, int((economy.cpi - 6) * 15))
         tint_surf = pygame.Surface((config.SCREEN_W, config.SCREEN_H), pygame.SRCALPHA)
@@ -893,3 +1014,4 @@ def apply_economic_tint(surf, economy):
         tint_surf = pygame.Surface((config.SCREEN_W, config.SCREEN_H), pygame.SRCALPHA)
         tint_surf.fill((30, 30, 50, tint))
         surf.blit(tint_surf, (0, 0))
+

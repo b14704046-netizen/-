@@ -31,14 +31,6 @@ INITIAL_UNEMPLOYMENT = 4.1
 INITIAL_GDP = 2.5
 INITIAL_APPROVAL = 68
 
-TARGET_INFLATION = 2.0
-TARGET_UNEMPLOYMENT = 4.0
-NEUTRAL_RATE = 2.5
-
-INFLATION_LOSE = 15.0
-UNEMPLOY_LOSE = 13.0
-APPROVAL_LOSE = 8
-WIN_MONTHS = 24
 
 FFR_MIN = 0.0
 FFR_MAX = 20.0
@@ -80,3 +72,31 @@ MG_COFFEE = "coffee"
 MG_PRESS = "press"
 MG_PIGEON = "pigeon"
 MG_TREADMILL = "treadmill"
+
+# ── 資產負債表 (QE/QT) ──────────────────────────────────────────────────────
+INITIAL_BS      = 8.5    # 初始資產負債表規模（兆美元，對應 2022 年高點附近）
+BS_MIN          = 2.0    # 最小規模（下限）
+BS_MAX          = 15.0   # 最大規模（極端 QE）
+BS_STEP         = 0.3    # 每月最大操作量（兆美元）
+ 
+# ── 通膨預期 ─────────────────────────────────────────────────────────────────
+INITIAL_INF_EXP = 2.5    # 初始通膨預期（%）
+INF_EXP_LOSE    = 8.0    # 通膨預期去錨 → 遊戲失敗閾值
+ 
+# ── 信用利差 ─────────────────────────────────────────────────────────────────
+INITIAL_CREDIT_SP = 1.5  # 初始信用利差（%，對應正常時期）
+ 
+# ── 實證校準參數 ──────────────────────────────────────────────────────────────
+NAIRU           = 4.5    # 自然失業率（Non-Accelerating Inflation Rate of Unemployment）
+POTENTIAL_GDP   = 2.0    # 潛在 GDP 成長率（%）
+NEUTRAL_RATE    = 2.5    # 中性利率（%，r*）
+ 
+# ── 原有參數（確保存在）──────────────────────────────────────────────────────
+TARGET_INFLATION = 2.0
+FFR_MIN          = 0.0
+FFR_MAX          = 20.0
+INFLATION_LOSE   = 15.0
+UNEMPLOY_LOSE    = 15.0
+APPROVAL_LOSE    = 15.0
+WIN_MONTHS       = 36
+ 
