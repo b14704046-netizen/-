@@ -316,6 +316,10 @@ def main():
                         economy.adjust_ffr(+1.0)
                     elif ev.key == pygame.K_MINUS:
                         economy.adjust_ffr(-1.0)
+                    elif ev.key == pygame.K_LEFTBRACKET:   # [ 鍵 → QT 縮表
+                        economy.adjust_balance_sheet(-0.1)
+                    elif ev.key == pygame.K_RIGHTBRACKET:  # ] 鍵 → QE 擴表
+                        economy.adjust_balance_sheet(+0.1 )
                     elif ev.key in (pygame.K_p, pygame.K_ESCAPE):
                         state = config.STATE_WORLD
 
@@ -329,6 +333,10 @@ def main():
                         economy.adjust_ffr(+1.0)
                     if ev.key == pygame.K_MINUS:
                         economy.adjust_ffr(-1.0)
+                    if ev.key == pygame.K_LEFTBRACKET:    # [ → QT
+                        economy.adjust_balance_sheet(-0.1)
+                    if ev.key == pygame.K_RIGHTBRACKET:   # ] → QE
+                        economy.adjust_balance_sheet(+0.1)
                     if ev.key in (pygame.K_e, pygame.K_RETURN, pygame.K_ESCAPE):
                         state = config.STATE_WORLD
 
@@ -458,6 +466,14 @@ def main():
                         if pygame.Rect(bx_ph, by_ph, bw_ph, 56).collidepoint(ev.pos):
                             economy.adjust_ffr(delta)
                             break
+                    bs_by = by_ph + 68          # FFR 按鈕下方再空一行
+                    bs_bw = (pw_ph - 30) // 2
+                    # QT 按鈕（左）
+                    if pygame.Rect(px_ph + 10, bs_by, bs_bw, 44).collidepoint(ev.pos):
+                        economy.adjust_balance_sheet(-0.1)
+                    # QE 按鈕（右）
+                    if pygame.Rect(px_ph + 20 + bs_bw, bs_by, bs_bw, 44).collidepoint(ev.pos):
+                        economy.adjust_balance_sheet(+0.1)
 
         # ── Update ────────────────────────────────────────────────────
         if state == config.STATE_WORLD:
