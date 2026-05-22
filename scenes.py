@@ -46,8 +46,9 @@ CN = 36  # column (capitol)
 MR = 37  # marble floor
 RP = 38  # red carpet
 SC = 39  # screen wall
+GW = 40  # graffiti wall
 
-SOLID = {W, D, B, FT, BN, LP, SH, PD, CF, TV, SK, CH, TB, BK, TR, FN, CN, CB, TM, SG, SC}
+SOLID = {W, D, B, FT, BN, LP, SH, PD, CF, TV, SK, CH, TB, BK, TR, FN, CN, CB, TM, SG, SC, GW}
 
 TILE_COLOR = {
     F:   (182, 160, 138),
@@ -90,6 +91,7 @@ TILE_COLOR = {
     MR:  (225, 222, 215),
     RP:  (148, 28,  38),
     SC:  (24,  55,  105),
+    GW:  (62,  58,  72),
 }
 
 
@@ -100,11 +102,11 @@ def _row(*cells):
 # ── City Overworld Map ────────────────────────────────────────────────
 # 72 columns × 48 rows. New east district + south district added.
 def _build_city():
-    """Build city as a list of lists, then place doors/buildings."""
+    """Build city — smaller building footprints, 2.5D sprites drawn separately."""
     cols, rows = 72, 48
     m = [[G for _ in range(cols)] for _ in range(rows)]
 
-    # Horizontal roads: rows 8-10, 24-26 (original), 36-38 (new)
+    # ── Roads (unchanged) ────────────────────────────────────────────────
     for y in [8, 9, 10]:
         for x in range(cols):
             m[y][x] = R if y == 9 else S
@@ -114,69 +116,56 @@ def _build_city():
     for y in [36, 37, 38]:
         for x in range(cols):
             m[y][x] = R if y == 37 else S
-
-    # Vertical roads: cols 23-25 (original), 49-51 (new east)
     for x in [23, 24, 25]:
         for y in range(rows):
             m[y][x] = R if x == 24 else S
     for x in [49, 50, 51]:
         for y in range(rows):
             m[y][x] = R if x == 50 else S
-
-    # Crosswalks at all intersections
     for y in [8, 10, 24, 26, 36, 38]:
         for x in [23, 25, 49, 51]:
             m[y][x] = CR
 
-    # Building plots — each has walls + door tile
-    # Format: (x0, y0, x1, y1, door_x, door_y, scene_name)
+    # ── Smaller building footprints ───────────────────────────────────────
+    # Top row: y=4-7 (3 tiles deep), door at south wall y=7
+    # Middle row: y=12-22 (10 tiles deep), door at south wall y=22
+    # Capitol: y=27-33, door at north wall y=27
+    # University: y=39-45, door at north wall y=39
     buildings = [
-        # Top half (rows 1-7)
-        (1,  1,  10, 7,  5,  7,  config.SCENE_APARTMENT),
-        (12, 1,  21, 7,  16, 7,  config.SCENE_CAFE),
-        (27, 1,  36, 7,  31, 7,  config.SCENE_SUPERMARKET),
-        (38, 1,  48, 7,  43, 7,  config.SCENE_GYM),
-        (52, 1,  70, 7,  61, 7,  config.SCENE_BANK),       # NEW
-
-        # Middle (rows 11-23)
-        (1,  11, 10, 23, 5,  23, config.SCENE_FED),
-        (12, 11, 21, 23, 16, 23, config.SCENE_PRESS),
-        # Park (27-36, 11-23) — open, no building
-        (38, 11, 48, 23, 43, 23, config.SCENE_WALL_ST),
-        (52, 11, 70, 23, 61, 23, config.SCENE_HOSPITAL),   # NEW
-
-        # Bottom original (rows 27-34)
-        (15, 27, 32, 34, 23, 27, config.SCENE_CAPITOL),
-
-        # New south district (rows 39-47)
-        (1,  39, 22, 47, 11, 39, config.SCENE_UNIVERSITY), # NEW
+        (2,  4,  7,  7,  4,  7,  config.SCENE_APARTMENT),
+        (10, 4,  15, 7,  12, 7,  config.SCENE_CAFE),
+        (27, 4,  32, 7,  29, 7,  config.SCENE_SUPERMARKET),
+        (35, 4,  41, 7,  38, 7,  config.SCENE_GYM),
+        (53, 4,  63, 7,  58, 7,  config.SCENE_BANK),
+        (2,  12, 9,  22, 5,  22, config.SCENE_FED),
+        (12, 12, 18, 22, 15, 22, config.SCENE_PRESS),
+        (38, 12, 44, 22, 41, 22, config.SCENE_WALL_ST),
+        (52, 12, 62, 22, 57, 22, config.SCENE_HOSPITAL),
+        (20, 27, 33, 33, 26, 27, config.SCENE_CAPITOL),
+        (2,  39, 15, 45, 8,  39, config.SCENE_UNIVERSITY),
     ]
 
     for x0, y0, x1, y1, dx, dy, _ in buildings:
-        # Walls
-        for x in range(x0, x1+1):
+        for x in range(x0, x1 + 1):
             m[y0][x] = W
             m[y1][x] = W
-        for y in range(y0, y1+1):
+        for y in range(y0, y1 + 1):
             m[y][x0] = W
             m[y][x1] = W
-        # Windows on wall
-        for x in range(x0+2, x1-1, 3):
+        for x in range(x0 + 2, x1 - 1, 3):
             if m[y0][x] == W: m[y0][x] = WIN
-        # Interior floor
-        for y in range(y0+1, y1):
-            for x in range(x0+1, x1):
+        for y in range(y0 + 1, y1):
+            for x in range(x0 + 1, x1):
                 m[y][x] = WD if y < 8 else TI
-        # Door
         m[dy][dx] = DR
 
-    # Park area in middle (27-36, 11-23) — unchanged
+    # ── Central park ─────────────────────────────────────────────────────
     for y in range(12, 23):
         for x in range(27, 37):
             m[y][x] = G
-    for tx, ty in [(28,13), (30,12), (33,12), (35,13), (28,16), (35,16),
-                   (28,20), (30,21), (33,21), (35,20), (31,16), (32,18),
-                   (29,15), (34,14), (30,19), (36,17)]:
+    for tx, ty in [(28,13),(30,12),(33,12),(35,13),(28,16),(35,16),
+                   (28,20),(30,21),(33,21),(35,20),(31,16),(32,18),
+                   (29,15),(34,14),(30,19),(36,17)]:
         m[ty][tx] = TR
     m[17][31] = FT; m[17][32] = FT
     m[18][31] = FT; m[18][32] = FT
@@ -184,25 +173,16 @@ def _build_city():
     m[20][29] = BN; m[20][34] = BN
     m[16][30] = PG; m[19][33] = PG
     m[14][32] = PG; m[21][31] = PG
-    for tx, ty in [(28,17), (29,18), (33,16), (34,19), (31,14), (32,21)]:
+    for tx, ty in [(28,17),(29,18),(33,16),(34,19),(31,14),(32,21)]:
         m[ty][tx] = FL
 
-    # East district open space — benches + trees (cols 52-70, rows 8-10 road strip)
-    for tx, ty in [(54,11),(58,11),(63,11),(67,11),
-                   (54,24),(58,24),(63,24),(67,24)]:
-        if m[ty][tx] == S:
-            m[ty][tx] = BN
-    # East plaza between bank (rows 1-7) and hospital (rows 11-23): rows 8-10 is road
+    # ── Street furniture ─────────────────────────────────────────────────
+    for tx, ty in [(54,11),(58,11),(63,11),(67,11),(54,24),(58,24),(63,24),(67,24)]:
+        if m[ty][tx] == S: m[ty][tx] = BN
     for tx, ty in [(53,8),(56,8),(60,8),(64,8),(68,8)]:
-        if m[ty][tx] == S:
-            m[ty][tx] = LP
+        if m[ty][tx] == S: m[ty][tx] = LP
 
-    # South district open plazas (cols 27-70, rows 39-47)
-    for y in range(40, 48):
-        for x in range(27, 71):
-            if m[y][x] == G:
-                pass  # will be handled by random below
-    # Park-like area south-east of university
+    # South plaza (same as before)
     for tx, ty in [(26,41),(27,40),(30,42),(33,41),(36,43),
                    (40,41),(44,40),(47,42),(50,41),(53,43),
                    (57,40),(60,42),(64,41),(67,43),(70,41)]:
@@ -211,75 +191,68 @@ def _build_city():
     for tx, ty in [(28,43),(31,44),(35,42),(42,44),(46,43),(51,42)]:
         if 0 <= ty < rows and 0 <= tx < cols and m[ty][tx] == G:
             m[ty][tx] = FL
-    # Benches in south plaza
     for tx, ty in [(30,40),(45,40),(60,40),(30,45),(45,45),(60,45)]:
         if 0 <= ty < rows and 0 <= tx < cols and m[ty][tx] == G:
             m[ty][tx] = BN
-    # Fountain in south central plaza
     for ty in [42, 43]:
         for tx in [37, 38]:
             m[ty][tx] = FT
-    m[42][36] = FL; m[42][39] = FL
-    m[43][36] = FL; m[43][39] = FL
+    m[42][36] = FL; m[42][39] = FL; m[43][36] = FL; m[43][39] = FL
 
     # Random trees/flowers on remaining grass
     for x in range(0, cols):
         for y in range(0, rows):
             if m[y][x] == G:
-                in_park = (27 <= x <= 36 and 11 <= y <= 23)
-                in_south_plaza = (27 <= x <= 70 and 39 <= y <= 47)
-                if random.random() < 0.05 and not in_park and not in_south_plaza:
+                in_park  = (27 <= x <= 36 and 12 <= y <= 22)
+                in_south = (27 <= x <= 70 and 39 <= y <= 47)
+                if random.random() < 0.05 and not in_park and not in_south:
                     m[y][x] = TR
                 elif random.random() < 0.06 and not in_park:
                     m[y][x] = FL
 
-    # Lampposts along all road sidewalks
+    # Lampposts on actual sidewalk rows
     for x in range(2, cols, 5):
-        for sw_y in [7, 11, 23, 27, 35, 39]:
+        for sw_y in [8, 10, 24, 26, 36, 38]:
             if 0 <= sw_y < rows and m[sw_y][x] == S:
                 m[sw_y][x] = LP
 
-    # Bus stops
-    for bx, by in [(8, 7), (20, 11), (38, 27), (12, 23),
-                   (56, 7), (56, 23), (8, 35), (30, 35)]:
+    # Bus stops (moved to actual S rows)
+    for bx, by in [(8,8),(20,10),(38,26),(12,24),(56,8),(56,24),(8,36),(30,36)]:
         if 0 <= by < rows and 0 <= bx < cols and m[by][bx] == S:
             m[by][bx] = BN
         if 0 <= by < rows and 0 <= bx+1 < cols and m[by][bx+1] == S:
             m[by][bx+1] = SG
 
-    # Newspaper stands (SG)
-    for nx, ny in [(4, 8), (14, 24), (40, 10), (55, 10), (55, 26), (8, 35)]:
+    for nx, ny in [(4,8),(14,24),(40,10),(55,10),(55,26),(8,36)]:
         if 0 <= ny < rows and 0 <= nx < cols and m[ny][nx] == S:
             m[ny][nx] = SG
-    # ATMs (CB)
-    for ax, ay in [(39, 8), (22, 26), (48, 26), (48, 10)]:
+    for ax, ay in [(39,8),(22,26),(48,26),(48,10)]:
         if 0 <= ay < rows and 0 <= ax < cols and m[ay][ax] == S:
             m[ay][ax] = CB
-    # Graffiti walls (SG)
-    for gx, gy in [(11, 10), (26, 26), (26, 36), (48, 38)]:
+    for gx, gy in [(11,10),(26,26),(26,36),(48,38)]:
         if 0 <= gy < rows and 0 <= gx < cols and m[gy][gx] == S:
-            m[gy][gx] = SG
+            m[gy][gx] = GW
 
     signs = {
-        (4,  7):  "🏠 公寓",
-        (15, 7):  "☕ 咖啡廳",
-        (30, 7):  "🛒 超市",
-        (42, 7):  "💪 健身房",
-        (60, 7):  "🏦 聯邦銀行",
-        (4,  23): "🏛 聯準會",
-        (15, 23): "📰 新聞室",
-        (42, 23): "📈 華爾街",
-        (60, 23): "🏥 醫療中心",
-        (22, 27): "🏛 國會",
-        (10, 39): "🎓 聯邦大學",
-        (4,  8):  "📰 報攤",
-        (14, 24): "📰 報攤",
-        (39, 8):  "🏧 ATM",
-        (22, 26): "🏧 ATM",
-        (11, 10): "🖌 塗鴉牆",
-        (26, 26): "🖌 塗鴉牆",
-        (55, 10): "📰 報攤",
-        (48, 26): "🏧 ATM",
+        (4,  7):  "公寓",
+        (12, 7):  "咖啡廳",
+        (29, 7):  "超市",
+        (38, 7):  "健身房",
+        (58, 7):  "聯邦銀行",
+        (5,  22): "聯準會",
+        (15, 22): "新聞室",
+        (41, 22): "華爾街",
+        (57, 22): "醫療中心",
+        (26, 27): "國會",
+        (8,  39): "聯邦大學",
+        (4,  8):  "報攤",
+        (14, 24): "報攤",
+        (39, 8):  "ATM",
+        (22, 26): "ATM",
+        (11, 10): "塗鴉牆",
+        (26, 26): "塗鴉牆",
+        (55, 10): "報攤",
+        (48, 26): "ATM",
     }
 
     return m, buildings, signs
@@ -310,35 +283,46 @@ def _build_apartment():
     # Living room TV
     m[2][10] = TV
     m[2][11] = TV
-    # Couch
-    m[3][10] = CH; m[3][11] = CH; m[3][12] = CH
-    # Coffee table
-    m[5][11] = TB
+    # Sofa (L-shape facing TV): back row + armrests
+    for x in range(9, 14):
+        m[3][x] = CH
+    m[4][9] = CH
+    m[4][13] = CH
+    # Coffee table in front of sofa
+    m[5][10] = TB; m[5][11] = TB; m[5][12] = TB
     # Kitchen
     m[2][16] = SK; m[2][17] = CF
     m[3][16] = TB; m[3][17] = TB
     # Bookshelf
     m[2][6] = BK; m[2][7] = BK
-    # Fridge in kitchen corner
+    # Fridge
     m[2][14] = CB
-    # Rug in living area
-    for x in range(9, 14):
-        for y in range(7, 11):
-            m[y][x] = RG
-    # Plant/flowers in corners
+    # Rug under sofa/living area
+    for x in range(8, 15):
+        for y in range(6, 10):
+            if m[y][x] == WD:
+                m[y][x] = RG
+    # Plants in corners
     m[12][2] = FL
     m[12][17] = FL
-    # Window walls
+    # Windows
     m[0][5] = WIN; m[0][10] = WIN; m[0][15] = WIN
+    # Golf putting green (lower-right area)
+    for y in range(8, 13):
+        for x in range(15, 19):
+            m[y][x] = G
 
     npcs = []
     doors = [{"x": 10, "y": 13, "target": config.SCENE_CITY, "spawn_tx": 5, "spawn_ty": 8}]
     objects = [
-        {"x": 2,  "y": 2, "type": "bed",    "label": "床（睡覺跳過時間）"},
-        {"x": 17, "y": 2, "type": "coffee", "label": "咖啡機（手沖小遊戲）"},
-        {"x": 11, "y": 2, "type": "tv",     "label": "電視（看新聞）"},
-        {"x": 6,  "y": 2, "type": "books",  "label": "書架（讀經濟學）"},
-        {"x": 14, "y": 2, "type": "fridge", "label": "冰箱（看食物價格）"},
+        {"x": 2,  "y": 2,  "type": "bed",     "label": "床（睡覺跳過時間）"},
+        {"x": 17, "y": 2,  "type": "coffee",  "label": "咖啡機（手沖小遊戲）"},
+        {"x": 11, "y": 2,  "type": "tv",      "label": "電視（看新聞）"},
+        {"x": 6,  "y": 2,  "type": "books",   "label": "書架（讀經濟學）"},
+        {"x": 14, "y": 2,  "type": "fridge",  "label": "冰箱（看食物價格）"},
+        {"x": 7,  "y": 4,  "type": "guitar",  "label": "吉他（聖誕演奏）"},
+        {"x": 3,  "y": 9,  "type": "bicycle", "label": "自行車"},
+        {"x": 17, "y": 10, "type": "golf",    "label": "高爾夫（小遊戲）"},
     ]
     return m, npcs, doors, objects, (10, 12)
 
@@ -844,6 +828,122 @@ def build_all_scenes():
 
 
 # ── Rendering ─────────────────────────────────────────────────────────
+_SIGN_STYLES = {
+    "咖啡": ((0, 70, 40),    (0, 130, 78),   (255, 248, 200)),
+    "超市": ((180, 36, 24),  (240, 72, 48),  (255, 255, 255)),
+    "健身": ((22, 30, 72),   (56, 80, 200),  (200, 220, 255)),
+    "銀行": ((28, 22, 16),   (188, 158, 72), (255, 240, 160)),
+    "聯準": ((18, 28, 56),   (158, 138, 72), (240, 228, 172)),
+    "新聞": ((28, 28, 30),   (80, 80, 88),   (240, 240, 240)),
+    "華爾": ((10, 48, 20),   (40, 160, 72),  (180, 255, 180)),
+    "醫療": ((230, 242, 255),(200, 22, 22),  (20, 20, 20)),
+    "國會": ((188, 180, 166),(98, 88, 68),   (26, 20, 16)),
+    "大學": ((16, 32, 84),   (100, 118, 218),(255, 255, 255)),
+    "公寓": ((76, 56, 40),   (136, 96, 64),  (255, 238, 196)),
+    "報攤": ((208, 172, 32), (150, 114, 16), (24, 14, 4)),
+    "ATM":  ((18, 44, 136),  (78, 118, 218), (255, 255, 255)),
+    "塗鴉": ((38, 38, 48),   (118, 78, 158), (200, 158, 238)),
+}
+
+def _sign_style(label):
+    for key, style in _SIGN_STYLES.items():
+        if key in label:
+            return style
+    return (18, 18, 26), (78, 78, 98), (255, 255, 255)
+
+
+def draw_city_signs(screen, scene, cx, cy, fnt_s):
+    """Draw building name signs directly on screen (after pixel-art scaling) — no flicker."""
+    if scene.name != config.SCENE_CITY:
+        return
+    ts = config.TILE_SIZE
+    for (tx, ty_t), label in CITY_SIGNS.items():
+        sx = tx * ts - int(cx)
+        sy = ty_t * ts - int(cy) - 18
+        if -200 < sx < config.SCREEN_W + 200 and -60 < sy < config.SCREEN_H:
+            _, _, text_col = _sign_style(label)
+            # Dark shadow for contrast against any background
+            sh = fnt_s.render(label, True, (0, 0, 0))
+            screen.blit(sh, (sx + 1, sy + 1))
+            t = fnt_s.render(label, True, text_col)
+            screen.blit(t, (sx, sy))
+
+
+def _draw_apartment_extras(surf, cx, cy, ts, t_ms):
+    """Draw guitar, bicycle, and golf hole for the apartment scene."""
+    # ── Guitar at tile (7, 4) ───────────────────────────────────────────
+    gx = 7 * ts - int(cx) + ts // 2
+    gy = 4 * ts - int(cy) + ts // 2 + 4
+    # Body (figure-8 shape: two ellipses)
+    pygame.draw.ellipse(surf, (160, 100, 30), pygame.Rect(gx - 8, gy - 2, 16, 18))
+    pygame.draw.ellipse(surf, (160, 100, 30), pygame.Rect(gx - 7, gy - 14, 14, 14))
+    pygame.draw.ellipse(surf, (190, 130, 50), pygame.Rect(gx - 7, gy - 1, 14, 16))
+    pygame.draw.ellipse(surf, (190, 130, 50), pygame.Rect(gx - 6, gy - 13, 12, 12))
+    # Sound hole
+    pygame.draw.circle(surf, (100, 60, 15), (gx, gy + 6), 4)
+    # Neck
+    pygame.draw.rect(surf, (140, 88, 25), pygame.Rect(gx - 2, gy - 36, 4, 26))
+    # Headstock
+    pygame.draw.rect(surf, (120, 75, 20), pygame.Rect(gx - 5, gy - 44, 10, 9), border_radius=2)
+    # Strings (3 visible)
+    for si in range(3):
+        sxs = gx - 3 + si * 3
+        pygame.draw.line(surf, (215, 205, 160), (sxs, gy - 36), (sxs, gy + 13), 1)
+    # Guitar strap (leaning against wall hint)
+    pygame.draw.line(surf, (120, 60, 20), (gx + 7, gy - 8), (gx + 10, gy + 15), 2)
+
+    # ── Bicycle at tile (3, 9) ──────────────────────────────────────────
+    bx = 3 * ts - int(cx) + ts // 2
+    by = 9 * ts - int(cy) + ts // 2 + 2
+    wr = ts // 4 - 2  # wheel radius = 10
+    # Wheels
+    pygame.draw.circle(surf, (40, 40, 48), (bx - wr - 6, by), wr, 3)
+    pygame.draw.circle(surf, (40, 40, 48), (bx + wr + 6, by), wr, 3)
+    # Spokes
+    for spoke in range(4):
+        ang = spoke * math.pi / 4
+        for bwx, bwy in [(bx - wr - 6, by), (bx + wr + 6, by)]:
+            pygame.draw.line(surf, (80, 80, 90),
+                             (bwx, bwy),
+                             (bwx + int((wr - 2) * math.cos(ang)),
+                              bwy + int((wr - 2) * math.sin(ang))), 1)
+    # Frame tubes
+    rear_hub = (bx - wr - 6, by)
+    front_hub = (bx + wr + 6, by)
+    bb = (bx + 2, by - 4)           # bottom bracket
+    seat_tube_top = (bx - 4, by - wr - 2)  # seat tube top
+    head_tube = (bx + wr, by - wr + 2)     # head tube
+    pygame.draw.line(surf, (60, 100, 200), rear_hub,      bb,            3)
+    pygame.draw.line(surf, (60, 100, 200), rear_hub,      seat_tube_top, 2)
+    pygame.draw.line(surf, (60, 100, 200), bb,            seat_tube_top, 2)
+    pygame.draw.line(surf, (60, 100, 200), bb,            head_tube,     3)
+    pygame.draw.line(surf, (60, 100, 200), seat_tube_top, head_tube,     2)
+    pygame.draw.line(surf, (60, 100, 200), head_tube,     front_hub,     2)
+    # Saddle
+    pygame.draw.rect(surf, (30, 30, 36), pygame.Rect(seat_tube_top[0] - 7, seat_tube_top[1] - 2, 13, 3), border_radius=1)
+    # Handlebar
+    pygame.draw.line(surf, (30, 30, 36), (head_tube[0] - 2, head_tube[1]),
+                     (head_tube[0] - 2, head_tube[1] - 8), 2)
+    pygame.draw.line(surf, (30, 30, 36), (head_tube[0] - 6, head_tube[1] - 8),
+                     (head_tube[0] + 2, head_tube[1] - 8), 2)
+
+    # ── Golf hole + flag at tile (17, 10) ──────────────────────────────
+    hx = 17 * ts - int(cx) + ts // 2
+    hy = 10 * ts - int(cy) + ts // 2
+    # Cup shadow
+    pygame.draw.circle(surf, (10, 38, 14), (hx, hy), 10)
+    pygame.draw.circle(surf, (8, 28, 10), (hx, hy), 8)
+    # Pole
+    pygame.draw.line(surf, (218, 205, 170), (hx, hy - 2), (hx, hy - 30), 2)
+    # Flag (waving)
+    wave = int(3 * math.sin(t_ms / 280.0))
+    pygame.draw.polygon(surf, (220, 38, 38), [
+        (hx + 1, hy - 30),
+        (hx + 14 + wave, hy - 24),
+        (hx + 1, hy - 18),
+    ])
+
+
 def draw_scene(surf, scene, cx, cy, economy, fnt_s):
     ts = config.TILE_SIZE
     x0 = max(0, int(cx // ts))
@@ -862,6 +962,9 @@ def draw_scene(surf, scene, cx, cy, economy, fnt_s):
     if scene.name == config.SCENE_CITY:
         _draw_city_ambience(surf, scene, cx, cy)
 
+    if scene.name == config.SCENE_APARTMENT:
+        _draw_apartment_extras(surf, cx, cy, ts, pygame.time.get_ticks())
+
     # Door sparkle hint on city map
     if scene.name == config.SCENE_CITY:
         t_ms = pygame.time.get_ticks()
@@ -873,16 +976,6 @@ def draw_scene(surf, scene, cx, cy, economy, fnt_s):
                 pygame.draw.rect(surf, (pulse, pulse//2, 0),
                                  pygame.Rect(dsx, dsy, ts, ts), 2)
 
-    # Overlay text for city signs
-    if scene.name == config.SCENE_CITY:
-        for (tx, ty), label in CITY_SIGNS.items():
-            sx, sy = tx * ts - int(cx), ty * ts - int(cy) - 14
-            if -200 < sx < config.SCREEN_W + 200:
-                bg = pygame.Surface((len(label)*16+12, 22), pygame.SRCALPHA)
-                bg.fill((0,0,0,150))
-                surf.blit(bg, (sx - 4, sy - 2))
-                t = fnt_s.render(label, True, config.WHITE)
-                surf.blit(t, (sx, sy))
 
     # Show inflation-driven price tags in supermarket
     if scene.name == config.SCENE_SUPERMARKET:
@@ -916,11 +1009,11 @@ def draw_scene(surf, scene, cx, cy, economy, fnt_s):
     if scene.name == config.SCENE_CITY and economy.unemployment > 8:
         severity = min(1.0, (economy.unemployment - 8) / 6.0)
         closed_buildings = [
-            (1, 1, 10, 7),   # 公寓附近店家
-            (38, 1, 48, 7),  # 健身房
+            (2,  4, 7,  7),   # 公寓
+            (35, 4, 41, 7),   # 健身房
         ]
         if severity > 0.5:
-            closed_buildings.append((12, 1, 21, 7))  # 咖啡廳
+            closed_buildings.append((10, 4, 15, 7))  # 咖啡廳
         for x0, y0, x1, y1 in closed_buildings:
             bx_s = x0 * ts - int(cx)
             by_s = y0 * ts - int(cy)
@@ -1026,6 +1119,509 @@ def _draw_city_ambience(surf, scene, cx, cy):
             pygame.draw.circle(surf, (28, 28, 28), (car_x + cw // 2, car_y + 5), 4)
             pygame.draw.circle(surf, (28, 28, 28), (car_x + cw // 2, car_y + ch - 5), 4)
 
+    # Building facades — drawn over wall tiles on building fronts
+    _draw_building_facades(surf, cx, cy, ts, t_ms)
+
+
+# 2.5D building data: (x0, y0, x1, y1, floors, face_rgb, side_rgb, roof_rgb, style)
+_BLD_2D5 = [
+    (2,  4,  7,  7,  4, (148, 94,  62), (104, 64, 42), (122, 78, 52), "apartment"),
+    (10, 4,  15, 7,  4, (18,  80,  46), (10,  56, 30), (14,  66, 38), "cafe"),
+    (27, 4,  32, 7,  4, (192, 48,  28), (148, 32, 16), (160, 40, 22), "market"),
+    (35, 4,  41, 7,  4, (26,  42,  86), (16,  28, 64), (20,  34, 74), "gym"),
+    (53, 4,  63, 7,  5, (180, 172, 152),(136,128,108), (192,184,164), "bank"),
+    (2,  12, 9,  22, 7, (52,  44,  66), (34,  28, 48), (42,  36, 56), "fed"),
+    (12, 12, 18, 22, 7, (62,  72,  92), (42,  52, 70), (52,  62, 82), "press"),
+    (38, 12, 44, 22, 8, (16,  20,  34), (8,   12, 22), (12,  16, 28), "wall_st"),
+    (52, 12, 62, 22, 6, (202, 212, 222),(160,170,180), (212,220,228), "hospital"),
+    (20, 27, 33, 33, 4, (210, 202, 182),(168,160,140), (220,212,192), "capitol"),
+    (2,  39, 15, 45, 5, (102, 74,  44), (74,  50, 28), (86,  60, 36), "university"),
+]
+
+
+def _bld_win_row(surf, fx, ftop, fw, floor_h, f, num_w, ww, wh, win_c):
+    """Draw one row of windows on floor f (0 = topmost floor)."""
+    fy_f = ftop + f * floor_h + (floor_h - wh) // 2
+    sp = fw // (num_w + 1)
+    for wi in range(num_w):
+        wx = fx + sp * (wi + 1) - ww // 2
+        pygame.draw.rect(surf, win_c, pygame.Rect(wx, fy_f, ww, wh))
+        pygame.draw.rect(surf, tuple(max(0, c - 40) for c in win_c),
+                         pygame.Rect(wx, fy_f, ww, wh), 1)
+
+
+def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
+    fh_fl = ts          # pixels per floor
+    wg = int(185 + 40 * math.sin(t_ms / 1100.0))
+
+    if style == "apartment":
+        # Brick texture
+        bc = tuple(max(0, c - 16) for c in base_c)
+        for i in range(0, fh, 7):
+            pygame.draw.line(surf, bc, (fx, ftop + i), (fx + fw, ftop + i), 1)
+        for row in range(fh // 7 + 1):
+            off = (row % 2) * (ts // 2)
+            for bk in range(fw // ts + 2):
+                bkx = fx + bk * ts + off - ts // 2
+                pygame.draw.line(surf, bc, (bkx, ftop + row * 7),
+                                 (bkx, min(ftop + row * 7 + 7, fbot)), 1)
+        # Windows with mullions on upper floors
+        for f in range(floors - 1):
+            fy_f = ftop + f * fh_fl
+            sp = fw // 3
+            for wi in range(2):
+                wx = fx + sp * (wi + 1) - ts // 4
+                wy = fy_f + (fh_fl - ts // 2) // 2
+                ww, wh = ts // 2, ts // 2
+                pygame.draw.rect(surf, (wg - 30, wg - 10, 50), pygame.Rect(wx, wy, ww, wh))
+                pygame.draw.line(surf, (wg - 60, wg - 40, 28), (wx + ww // 2, wy), (wx + ww // 2, wy + wh), 1)
+                pygame.draw.line(surf, (wg - 60, wg - 40, 28), (wx, wy + wh // 2), (wx + ww, wy + wh // 2), 1)
+            # Balcony ledge at floor divider
+            if f > 0:
+                pygame.draw.rect(surf, tuple(min(255, c + 12) for c in base_c),
+                                 pygame.Rect(fx + 2, fy_f - 3, fw - 4, 3))
+        # Ground floor entrance
+        gf = fbot - fh_fl
+        dw, dh = ts // 2, fh_fl - 6
+        pygame.draw.rect(surf, (58, 36, 14), pygame.Rect(fx + 2, gf, fw - 4, 8))
+        pygame.draw.rect(surf, (78, 50, 26),
+                         pygame.Rect(fx + fw // 2 - dw // 2, gf + 10, dw, dh - 4),
+                         border_radius=2)
+        pygame.draw.rect(surf, (48, 28, 10),
+                         pygame.Rect(fx + fw // 2 - dw // 2, gf + 10, dw, dh - 4),
+                         border_radius=2, width=1)
+        pygame.draw.circle(surf, (200, 160, 40), (fx + fw // 2, gf + 8), 3)
+
+    elif style == "cafe":
+        gf = fbot - fh_fl
+        # Upper residential floors (above cafe) — warm lit windows
+        for f in range(floors - 1):
+            fy_f = ftop + f * fh_fl
+            sp = fw // 3
+            for wi in range(2):
+                wx2 = fx + sp * (wi + 1) - ts // 4
+                wh2 = fh_fl - 14
+                g2 = int(145 + 50 * math.sin(t_ms / 900.0 + wi * 1.2 + f * 0.8))
+                pygame.draw.rect(surf, (g2, max(0, g2 - 55), 18),
+                                 pygame.Rect(wx2, fy_f + 7, ts // 2, wh2))
+                pygame.draw.rect(surf, (0, 48, 26),
+                                 pygame.Rect(wx2, fy_f + 7, ts // 2, wh2), 1)
+                pygame.draw.line(surf, (0, 38, 18),
+                                 (wx2 + ts // 4, fy_f + 7), (wx2 + ts // 4, fy_f + 7 + wh2), 1)
+            # Small flower box at floor divider
+            if f > 0:
+                pygame.draw.rect(surf, (0, 62, 36),
+                                 pygame.Rect(fx + 4, fy_f - 4, fw - 8, 4))
+        # Green awning strip at ground floor
+        pygame.draw.rect(surf, (0, 76, 42), pygame.Rect(fx, gf, fw, 8))
+        for i in range(fw // 10):
+            pygame.draw.arc(surf, (0, 54, 28),
+                            pygame.Rect(fx + i * 10, gf + 4, 10, 8), 0, math.pi, 2)
+        # Large storefront windows
+        for wi in range(3):
+            ww2 = fw // 3 - 6
+            wx2 = fx + wi * (fw // 3) + 3
+            wh2 = fh_fl - 14
+            g2 = int(145 + 50 * math.sin(t_ms / 900.0 + wi))
+            pygame.draw.rect(surf, (g2, max(0, g2 - 55), 18),
+                             pygame.Rect(wx2, gf + 10, ww2, wh2))
+            pygame.draw.rect(surf, (0, 48, 26),
+                             pygame.Rect(wx2, gf + 10, ww2, wh2), 1)
+        # Logo circle + inner ring
+        pygame.draw.circle(surf, (0, 108, 58), (fx + fw // 2, gf + 4), 10)
+        pygame.draw.circle(surf, (255, 248, 218), (fx + fw // 2, gf + 4), 7)
+        pygame.draw.circle(surf, (0, 78, 46), (fx + fw // 2, gf + 4), 4)
+        # Cornice line at top of ground floor
+        pygame.draw.rect(surf, (0, 62, 36), pygame.Rect(fx, gf - 3, fw, 3))
+
+    elif style == "market":
+        gf = fbot - fh_fl
+        dc = [(255, 220, 40), (40, 200, 80), (255, 120, 40), (80, 180, 255)]
+        # Upper office floors (above market)
+        for f in range(floors - 1):
+            fy_f = ftop + f * fh_fl
+            _bld_win_row(surf, fx, ftop, fw, fh_fl, f, 3, ts // 2 - 4, ts * 2 // 3,
+                         (148, 188, 218))
+            # Horizontal floor band
+            pygame.draw.rect(surf, tuple(max(0, c - 22) for c in base_c),
+                             pygame.Rect(fx, fy_f + fh_fl - 3, fw, 3))
+        # Red banner at ground floor
+        pygame.draw.rect(surf, (210, 38, 18), pygame.Rect(fx, gf, fw, 10))
+        for i in range(fw // 14):
+            pygame.draw.circle(surf, dc[i % 4], (fx + i * 14 + 7, gf + 5), 4)
+        # Wide glass front
+        pygame.draw.rect(surf, (158, 198, 218),
+                         pygame.Rect(fx + 3, gf + 11, fw - 6, fh_fl - 14))
+        pygame.draw.rect(surf, (78, 118, 138),
+                         pygame.Rect(fx + 3, gf + 11, fw - 6, fh_fl - 14), 1)
+        # Sliding door divider
+        pygame.draw.line(surf, (78, 118, 138),
+                         (fx + fw // 2, gf + 11), (fx + fw // 2, gf + fh_fl - 3), 1)
+        for si in range(2):
+            sx2 = fx + 6 + si * (fw // 2 - 4)
+            pygame.draw.rect(surf, (98, 68, 38), pygame.Rect(sx2, gf + 20, fw // 2 - 10, 4))
+            pygame.draw.rect(surf, (198, 78, 38), pygame.Rect(sx2 + 2, gf + 16, 8, 4))
+            pygame.draw.rect(surf, (38, 178, 78), pygame.Rect(sx2 + 12, gf + 16, 8, 4))
+
+    elif style == "gym":
+        seg_w = fw // 3
+        for f in range(floors):
+            fy_f = ftop + f * fh_fl
+            for s in range(3):
+                g2 = int(55 + 20 * math.sin(t_ms / 600.0 + f + s))
+                gl = pygame.Surface((seg_w - 3, fh_fl - 2), pygame.SRCALPHA)
+                gl.fill((58 + g2, 98 + g2, 198 + g2 // 2, 85))
+                surf.blit(gl, (fx + s * seg_w + 1, fy_f + 1))
+                pygame.draw.rect(surf, tuple(max(0, c - 18) for c in base_c),
+                                 pygame.Rect(fx + s * seg_w, fy_f, seg_w, fh_fl), 1)
+            if f == floors // 2:
+                mid_x = fx + fw // 2
+                anim = int(5 * math.sin(t_ms / 580.0))
+                pygame.draw.line(surf, (28, 48, 118),
+                                 (mid_x - 12, fy_f + 8), (mid_x + 12, fy_f + 8), 3)
+                pygame.draw.line(surf, (28, 48, 118),
+                                 (mid_x, fy_f + 8), (mid_x, fy_f + 30 + anim), 2)
+        # Logo stripe at top of ground floor
+        gf = fbot - fh_fl
+        pygame.draw.rect(surf, (22, 36, 80), pygame.Rect(fx + 4, gf + 4, fw - 8, 6))
+        # Entrance: dark frame + double door
+        pygame.draw.rect(surf, (16, 24, 56),
+                         pygame.Rect(fx + fw // 2 - ts // 3, gf + 12, ts * 2 // 3, fh_fl - 14))
+        pygame.draw.line(surf, (40, 60, 140),
+                         (fx + fw // 2, gf + 12), (fx + fw // 2, gf + fh_fl - 2), 1)
+
+    elif style == "bank":
+        col_sp = fw // 5
+        # Stone columns
+        for ci in range(6):
+            colx = fx + ci * col_sp
+            pygame.draw.rect(surf, tuple(min(255, c + 22) for c in base_c),
+                             pygame.Rect(colx, ftop, 8, fh), border_radius=2)
+            pygame.draw.rect(surf, tuple(max(0, c - 18) for c in base_c),
+                             pygame.Rect(colx, ftop, 8, fh), border_radius=2, width=1)
+            pygame.draw.rect(surf, tuple(min(255, c + 32) for c in base_c),
+                             pygame.Rect(colx - 2, ftop, 12, 8))
+            pygame.draw.rect(surf, tuple(min(255, c + 32) for c in base_c),
+                             pygame.Rect(colx - 2, fbot - 8, 12, 8))
+        # Arched windows
+        for f in range(floors - 1):
+            for wi in range(2):
+                wx2 = fx + col_sp * (wi * 2 + 1) + (col_sp - ts // 2) // 2
+                wy2 = ftop + f * fh_fl + 6
+                ww2, wh2 = ts // 2, fh_fl - 10
+                g2 = int(118 + 35 * math.sin(t_ms / 1200.0 + wi * f * 0.4))
+                pygame.draw.rect(surf, (g2, max(0, g2 - 22), 18),
+                                 pygame.Rect(wx2, wy2, ww2, wh2), border_radius=ww2 // 2)
+                pygame.draw.rect(surf, (78, 74, 58),
+                                 pygame.Rect(wx2, wy2, ww2, wh2), border_radius=ww2 // 2, width=1)
+        pygame.draw.rect(surf, (186, 154, 58), pygame.Rect(fx, ftop, fw, 4))
+        pygame.draw.rect(surf, (186, 154, 58), pygame.Rect(fx, fbot - 4, fw, 4))
+        # Entrance steps at base
+        for st in range(3):
+            sx2 = fx + st * 4
+            pygame.draw.rect(surf, tuple(min(255, c + 14 + st * 6) for c in base_c),
+                             pygame.Rect(sx2, fbot - 6 - st * 3, fw - st * 8, 3))
+        # Eagle/emblem at pediment center
+        mid_x = fx + fw // 2
+        pygame.draw.circle(surf, (186, 154, 58), (mid_x, ftop + 8), 6)
+        pygame.draw.circle(surf, tuple(min(255, c + 28) for c in base_c), (mid_x, ftop + 8), 4)
+        pygame.draw.line(surf, (186, 154, 58), (mid_x - 8, ftop + 8), (mid_x + 8, ftop + 8), 2)
+
+    elif style == "fed":
+        # Stone block rows
+        for i in range(0, fh, fh_fl // 2):
+            pygame.draw.line(surf, tuple(min(255, c + 8) for c in base_c),
+                             (fx, ftop + i), (fx + fw, ftop + i), 1)
+        col_sp = fw // 4
+        for ci in range(5):
+            colx = fx + ci * col_sp
+            pygame.draw.rect(surf, tuple(min(255, c + 14) for c in base_c),
+                             pygame.Rect(colx, ftop + fh_fl, 6, fh - fh_fl * 2))
+            pygame.draw.rect(surf, tuple(max(0, c - 8) for c in base_c),
+                             pygame.Rect(colx, ftop + fh_fl, 6, fh - fh_fl * 2), width=1)
+            # Column capitals
+            pygame.draw.rect(surf, tuple(min(255, c + 20) for c in base_c),
+                             pygame.Rect(colx - 3, ftop + fh_fl, 12, 5))
+            pygame.draw.rect(surf, tuple(min(255, c + 20) for c in base_c),
+                             pygame.Rect(colx - 3, fbot - fh_fl * 2 - 5, 12, 5))
+        for f in range(1, floors - 1):
+            _bld_win_row(surf, fx, ftop, fw, fh_fl, f, 3, ts // 2, ts // 2, (88, 108, 132))
+        # Heavy cornice at top
+        pygame.draw.rect(surf, tuple(max(0, c - 14) for c in base_c),
+                         pygame.Rect(fx, ftop, fw, fh_fl // 2))
+        pygame.draw.rect(surf, tuple(min(255, c + 18) for c in base_c),
+                         pygame.Rect(fx, ftop + fh_fl // 2 - 3, fw, 3))
+        # Entrance pediment (ground floor center)
+        gf = fbot - fh_fl
+        mid_x = fx + fw // 2
+        ped_pts = [(mid_x - ts, gf), (mid_x + ts, gf), (mid_x, gf - ts // 2 + 4)]
+        pygame.draw.polygon(surf, tuple(min(255, c + 16) for c in base_c), ped_pts)
+        pygame.draw.polygon(surf, tuple(max(0, c - 10) for c in base_c), ped_pts, 1)
+        # Entrance steps
+        for st in range(3):
+            pygame.draw.rect(surf, tuple(min(255, c + 10 + st * 5) for c in base_c),
+                             pygame.Rect(fx + st * 5, fbot - 5 - st * 3, fw - st * 10, 3))
+
+    elif style == "press":
+        for f in range(floors):
+            fy_f = ftop + f * fh_fl
+            g2 = int(38 + 12 * math.sin(t_ms / 800.0 + f * 0.5))
+            gl = pygame.Surface((fw - 2, fh_fl - 2), pygame.SRCALPHA)
+            gl.fill((g2 + 18, g2 + 38, g2 + 68, 72))
+            surf.blit(gl, (fx + 1, fy_f + 1))
+            pygame.draw.line(surf, tuple(min(255, c + 22) for c in base_c),
+                             (fx, fy_f), (fx + fw, fy_f), 2)
+        for vi in range(4):
+            vx = fx + vi * (fw // 3)
+            pygame.draw.line(surf, tuple(min(255, c + 20) for c in base_c),
+                             (vx, ftop), (vx, fbot), 1)
+        # News ticker strip at ground floor
+        gf = fbot - fh_fl
+        pygame.draw.rect(surf, (180, 30, 20), pygame.Rect(fx, gf + fh_fl - 12, fw, 8))
+        # Broadcast antenna at top center
+        mid_x = fx + fw // 2
+        pygame.draw.line(surf, tuple(min(255, c + 30) for c in base_c),
+                         (mid_x, ftop - 1), (mid_x, ftop - ts // 3), 2)
+        for aw in range(3):
+            aw_y = ftop - 4 - aw * 5
+            pygame.draw.line(surf, tuple(min(255, c + 20) for c in base_c),
+                             (mid_x - aw * 3 - 3, aw_y), (mid_x + aw * 3 + 3, aw_y), 1)
+        # Satellite dish
+        pygame.draw.arc(surf, (150, 160, 180),
+                        pygame.Rect(fx + fw - ts // 2 - 2, ftop + 4, ts // 2, ts // 3),
+                        0, math.pi, 3)
+
+    elif style == "wall_st":
+        for f in range(floors):
+            fy_f = ftop + f * fh_fl
+            for vi in range(4):
+                wsx = fx + vi * (fw // 4)
+                refl = int(12 + 7 * math.sin(t_ms / 1000.0 + vi * 0.7 + f * 0.3))
+                gl = pygame.Surface((fw // 4 - 2, fh_fl - 1), pygame.SRCALPHA)
+                gl.fill((refl, refl + 4, refl + 18, 92))
+                surf.blit(gl, (wsx + 1, fy_f))
+                pygame.draw.line(surf, tuple(min(255, c + 12) for c in base_c),
+                                 (wsx, fy_f), (wsx, fy_f + fh_fl), 1)
+            pygame.draw.line(surf, tuple(min(255, c + 8) for c in base_c),
+                             (fx, fy_f), (fx + fw, fy_f), 1)
+        # Dark granite entrance base
+        gf = fbot - fh_fl
+        pygame.draw.rect(surf, tuple(max(0, c - 6) for c in base_c),
+                         pygame.Rect(fx, gf, fw, fh_fl))
+        # Arched entrance
+        mid_x = fx + fw // 2
+        ew = ts * 2 // 3
+        pygame.draw.rect(surf, (6, 8, 16),
+                         pygame.Rect(mid_x - ew // 2, gf + 8, ew, fh_fl - 9))
+        pygame.draw.ellipse(surf, (6, 8, 16),
+                            pygame.Rect(mid_x - ew // 2, gf + 4, ew, ew // 2))
+        # Gold trim at entrance surround
+        pygame.draw.rect(surf, (160, 138, 42),
+                         pygame.Rect(mid_x - ew // 2 - 2, gf + 6, ew + 4, fh_fl - 7), 1)
+        # Spire at top
+        pygame.draw.line(surf, tuple(min(255, c + 22) for c in base_c),
+                         (mid_x, ftop - 1), (mid_x, ftop - ts // 2), 2)
+        pygame.draw.polygon(surf, (160, 138, 42),
+                            [(mid_x - 4, ftop - 1), (mid_x + 4, ftop - 1), (mid_x, ftop - ts // 2 - 4)])
+
+    elif style == "hospital":
+        for f in range(floors):
+            _bld_win_row(surf, fx, ftop, fw, fh_fl, f, 3, ts // 2 + 2, ts // 2 + 4,
+                         (198, 218, 238))
+        # Horizontal floor spandrels (blue glass bands)
+        for f in range(floors):
+            fy_f = ftop + f * fh_fl
+            pygame.draw.rect(surf, (78, 118, 198), pygame.Rect(fx, fy_f, fw, 4))
+        # Red cross emblem (white background, red cross)
+        cx2, cy2 = fx + fw // 2, ftop + fh_fl + fh_fl // 2
+        pygame.draw.rect(surf, (240, 240, 248), pygame.Rect(cx2 - 14, cy2 - 14, 28, 28))
+        pygame.draw.rect(surf, (218, 28, 28), pygame.Rect(cx2 - 3, cy2 - 11, 6, 22))
+        pygame.draw.rect(surf, (218, 28, 28), pygame.Rect(cx2 - 11, cy2 - 3, 22, 6))
+        pygame.draw.rect(surf, (78, 118, 198), pygame.Rect(fx, ftop, fw, 6))
+        # Ground floor entrance canopy
+        gf = fbot - fh_fl
+        pygame.draw.rect(surf, (78, 118, 198),
+                         pygame.Rect(fx + fw // 4, gf - 5, fw // 2, 5))
+        pygame.draw.line(surf, (60, 100, 180),
+                         (fx + fw // 4, gf), (fx + fw // 4, gf + 8), 1)
+        pygame.draw.line(surf, (60, 100, 180),
+                         (fx + fw * 3 // 4, gf), (fx + fw * 3 // 4, gf + 8), 1)
+        # Sliding glass doors
+        mid_x = fx + fw // 2
+        pygame.draw.rect(surf, (188, 218, 238),
+                         pygame.Rect(mid_x - ts // 2, gf + 8, ts, fh_fl - 10))
+        pygame.draw.line(surf, (78, 118, 198),
+                         (mid_x, gf + 8), (mid_x, gf + fh_fl - 2), 1)
+
+    elif style == "capitol":
+        col_sp = fw // 8
+        for ci in range(9):
+            colx = fx + ci * col_sp
+            pygame.draw.rect(surf, tuple(min(255, c + 26) for c in base_c),
+                             pygame.Rect(colx, ftop + fh_fl, 8, fh - fh_fl))
+            pygame.draw.rect(surf, tuple(max(0, c - 8) for c in base_c),
+                             pygame.Rect(colx, ftop + fh_fl, 8, fh - fh_fl), 1)
+            # Column capital + base
+            pygame.draw.rect(surf, tuple(min(255, c + 32) for c in base_c),
+                             pygame.Rect(colx - 2, ftop + fh_fl, 12, 6))
+            pygame.draw.rect(surf, tuple(min(255, c + 32) for c in base_c),
+                             pygame.Rect(colx - 2, fbot - 7, 12, 7))
+        mid_x = fx + fw // 2
+        ped_pts = [(fx + 4, ftop + fh_fl), (fx + fw - 4, ftop + fh_fl), (mid_x, ftop + 4)]
+        pygame.draw.polygon(surf, tuple(min(255, c + 22) for c in base_c), ped_pts)
+        pygame.draw.polygon(surf, tuple(max(0, c - 14) for c in base_c), ped_pts, 1)
+        for si in range(3):
+            pygame.draw.rect(surf, tuple(min(255, c + si * 6) for c in base_c),
+                             pygame.Rect(fx + si * 5, fbot - si * 4 - 4, fw - si * 10, 4))
+        for f in range(1, floors - 1):
+            _bld_win_row(surf, fx, ftop, fw, fh_fl, f, 4, ts // 2, ts // 2 + 4,
+                         (wg - 42, wg - 32, 48))
+        # Central dome above pediment
+        dome_y = ftop + 2
+        dome_r = ts // 2 + 2
+        pygame.draw.ellipse(surf, tuple(min(255, c + 28) for c in base_c),
+                            pygame.Rect(mid_x - dome_r, dome_y - dome_r // 2, dome_r * 2, dome_r))
+        pygame.draw.ellipse(surf, tuple(max(0, c - 14) for c in base_c),
+                            pygame.Rect(mid_x - dome_r, dome_y - dome_r // 2, dome_r * 2, dome_r), 1)
+        pygame.draw.line(surf, tuple(min(255, c + 20) for c in base_c),
+                         (mid_x, dome_y - dome_r // 2), (mid_x, dome_y - dome_r // 2 - ts // 3), 2)
+        # Flag (red/white/blue stripes)
+        pole_top = dome_y - dome_r // 2 - ts // 3
+        for fi in range(3):
+            fcol = [(218, 28, 28), (240, 240, 240), (28, 60, 168)][fi]
+            pygame.draw.rect(surf, fcol,
+                             pygame.Rect(mid_x + 1, pole_top + fi * 4, ts // 3, 4))
+
+    elif style == "university":
+        bc = tuple(max(0, c - 12) for c in base_c)
+        for i in range(0, fh, 8):
+            pygame.draw.line(surf, bc, (fx, ftop + i), (fx + fw, ftop + i), 1)
+        for row in range(fh // 8 + 1):
+            off = (row % 2) * (ts // 2)
+            for bk in range(fw // ts + 2):
+                bkx = fx + bk * ts + off - ts // 2
+                pygame.draw.line(surf, bc, (bkx, ftop + row * 8),
+                                 (bkx, min(ftop + row * 8 + 8, fbot)), 1)
+        num_w = max(2, fw // (ts + 6))
+        sp = fw // (num_w + 1)
+        for f in range(floors):
+            wy2 = ftop + f * fh_fl + 6
+            for wi in range(num_w):
+                wx2 = fx + sp * (wi + 1) - ts // 4
+                ww2, wh2 = ts // 2, fh_fl - 10
+                pygame.draw.rect(surf, (wg - 52, wg - 32, 48),
+                                 pygame.Rect(wx2, wy2, ww2, wh2), border_radius=ww2 // 2)
+                pygame.draw.rect(surf, (58, 38, 18),
+                                 pygame.Rect(wx2, wy2, ww2, wh2), border_radius=ww2 // 2, width=1)
+        # Central tower with clock
+        mid_x = fx + fw // 2
+        tw = 18
+        tower_top = ftop - ts * 2 // 3
+        pygame.draw.rect(surf, tuple(max(0, c - 8) for c in base_c),
+                         pygame.Rect(mid_x - tw // 2, tower_top, tw, ftop - tower_top + 4))
+        pygame.draw.rect(surf, tuple(max(0, c - 22) for c in base_c),
+                         pygame.Rect(mid_x - tw // 2, tower_top, tw, ftop - tower_top + 4), width=1)
+        # Clock face on tower
+        clock_y = tower_top + (ftop - tower_top) // 2
+        pygame.draw.circle(surf, (245, 238, 210), (mid_x, clock_y), 6)
+        pygame.draw.circle(surf, (80, 60, 28), (mid_x, clock_y), 6, 1)
+        hr_a = (t_ms / 3600000.0) * 2 * math.pi
+        mn_a = (t_ms / 60000.0) * 2 * math.pi
+        pygame.draw.line(surf, (60, 40, 14),
+                         (mid_x, clock_y),
+                         (mid_x + int(3 * math.sin(hr_a)), clock_y - int(3 * math.cos(hr_a))), 2)
+        pygame.draw.line(surf, (60, 40, 14),
+                         (mid_x, clock_y),
+                         (mid_x + int(5 * math.sin(mn_a)), clock_y - int(5 * math.cos(mn_a))), 1)
+        # Entrance arch at ground floor
+        gf = fbot - fh_fl
+        aw = ts * 2 // 3
+        pygame.draw.rect(surf, tuple(max(0, c - 18) for c in base_c),
+                         pygame.Rect(mid_x - aw // 2, gf + 6, aw, fh_fl - 7))
+        pygame.draw.ellipse(surf, tuple(max(0, c - 18) for c in base_c),
+                            pygame.Rect(mid_x - aw // 2, gf + 2, aw, aw // 2))
+        pygame.draw.ellipse(surf, tuple(max(0, c - 30) for c in base_c),
+                            pygame.Rect(mid_x - aw // 2, gf + 2, aw, aw // 2), 1)
+        pygame.draw.rect(surf, tuple(max(0, c - 30) for c in base_c),
+                         pygame.Rect(mid_x - aw // 2, gf + 6, aw, fh_fl - 7), 1)
+
+
+def _draw_building_facades(surf, cx, cy, ts, t_ms):
+    """Draw 2.5D building sprites over the tile grid."""
+    old_clip = surf.get_clip()
+    ddx = ts // 3   # depth: rightward
+    ddy = ts // 3   # depth: upward (will subtract in y)
+
+    for (x0, y0, x1, y1, floors, fc, sc, rc, style) in _BLD_2D5:
+        fw = (x1 - x0 + 1) * ts
+        fh = floors * ts
+        fx = x0 * ts - int(cx)
+        fbot = (y1 + 1) * ts - int(cy)
+        ftop = fbot - fh
+
+        if fx + fw + ddx < 0 or fx > config.SCREEN_W:
+            continue
+
+        # Clip to building x-range (allow full y for height extension)
+        surf.set_clip(pygame.Rect(fx, 0, fw + ddx + 2, config.SCREEN_H))
+
+        # Cover exposed tile rows above facade (upper-building setback)
+        ftop_tile = y0 * ts - int(cy)
+        if ftop_tile < ftop:
+            uc = tuple(max(0, c - 28) for c in fc)
+            us = tuple(max(0, c - 14) for c in sc)
+            ur = tuple(max(0, c - 8) for c in rc)
+            pygame.draw.rect(surf, uc, pygame.Rect(fx, ftop_tile, fw, ftop - ftop_tile))
+            pygame.draw.polygon(surf, us, [
+                (fx + fw, ftop_tile), (fx + fw + ddx, ftop_tile - ddy),
+                (fx + fw + ddx, ftop - ddy), (fx + fw, ftop),
+            ])
+            pygame.draw.polygon(surf, ur, [
+                (fx, ftop_tile), (fx + fw, ftop_tile),
+                (fx + fw + ddx, ftop_tile - ddy), (fx + ddx, ftop_tile - ddy),
+            ])
+            pygame.draw.polygon(surf, tuple(max(0, c - 22) for c in rc), [
+                (fx, ftop_tile), (fx + fw, ftop_tile),
+                (fx + fw + ddx, ftop_tile - ddy), (fx + ddx, ftop_tile - ddy),
+            ], 1)
+
+        # 1. Right side face (east, slightly darker)
+        side_pts = [
+            (fx + fw,        ftop),
+            (fx + fw + ddx,  ftop - ddy),
+            (fx + fw + ddx,  fbot - ddy),
+            (fx + fw,        fbot),
+        ]
+        pygame.draw.polygon(surf, sc, side_pts)
+        for fi in range(1, floors):
+            ry = ftop + fi * ts
+            pygame.draw.line(surf, tuple(max(0, c - 12) for c in sc),
+                             (fx + fw, ry), (fx + fw + ddx, ry - ddy), 1)
+
+        # 2. Front face
+        pygame.draw.rect(surf, fc, pygame.Rect(fx, ftop, fw, fh))
+        for fi in range(1, floors):
+            fy_div = ftop + fi * ts
+            pygame.draw.line(surf, tuple(max(0, c - 20) for c in fc),
+                             (fx, fy_div), (fx + fw, fy_div), 1)
+        pygame.draw.rect(surf, tuple(max(0, c - 32) for c in fc),
+                         pygame.Rect(fx, ftop, fw, fh), 1)
+
+        # 3. Roof top face (lighter, parallelogram)
+        roof_pts = [
+            (fx,             ftop),
+            (fx + fw,        ftop),
+            (fx + fw + ddx,  ftop - ddy),
+            (fx + ddx,       ftop - ddy),
+        ]
+        pygame.draw.polygon(surf, rc, roof_pts)
+        pygame.draw.polygon(surf, tuple(max(0, c - 16) for c in rc), roof_pts, 1)
+
+        # 4. Style-specific facade details
+        _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, fc, ts, t_ms)
+
+    surf.set_clip(old_clip)
+
 
 def _decorate(surf, sx, sy, ts, tile, tx, ty, fnt_s, economy):
     h = (tx * 2654435761 + ty * 2246822519) & 0xFFFF
@@ -1043,14 +1639,16 @@ def _decorate(surf, sx, sy, ts, tile, tx, ty, fnt_s, economy):
             gc = (max(38, min(90, 48 + v)), max(110, min(185, 148 + v)), max(38, min(75, 52 + v)))
             pygame.draw.circle(surf, gc, (gx, gy), 2)
     elif tile == R:
-        # Dashed center lane marking
-        dash_period = 24
-        # Horizontal road rows have y=8,9,10 (9 is center) or 24,25,26
-        if (ty % 16 in (8, 9, 10, 24, 25, 26)) or True:
-            phase = (tx * ts) % (dash_period * 2)
-            if phase < dash_period:
-                pygame.draw.line(surf, (200, 195, 80),
-                                 (sx, sy + ts//2), (sx + ts, sy + ts//2), 1)
+        # Center lane markings: vertical road cols (24, 50) vs horizontal
+        is_v_road = tx in (24, 50)
+        if is_v_road:
+            if ty % 4 < 2:
+                pygame.draw.rect(surf, (212, 202, 50),
+                                 pygame.Rect(sx + ts//2 - 1, sy + 4, 3, ts - 8))
+        else:
+            if tx % 4 < 2:
+                pygame.draw.rect(surf, (212, 202, 50),
+                                 pygame.Rect(sx + 4, sy + ts//2 - 1, ts - 8, 3))
         # Asphalt grain
         for i in range(2):
             ax = sx + ((h + i * 53) % (ts - 2)) + 1
@@ -1226,10 +1824,31 @@ def _decorate(surf, sx, sy, ts, tile, tx, ty, fnt_s, economy):
         for px_f in range(sx+4, sx+ts-4, 9):
             pygame.draw.rect(surf, (118, 118, 130), pygame.Rect(px_f, sy+4, 4, ts-8))
     elif tile == CB:
-        pygame.draw.rect(surf, (130, 110, 80), pygame.Rect(sx+4, sy+4, ts-9, ts-9), border_radius=3)
-        pygame.draw.rect(surf, (98, 78, 58), pygame.Rect(sx+4, sy+4, ts-9, ts-9), border_radius=3, width=2)
-        pygame.draw.line(surf, (108, 88, 65), (sx+ts//2, sy+4), (sx+ts//2, sy+ts-4), 1)
-        pygame.draw.line(surf, (108, 88, 65), (sx+4, sy+ts//2), (sx+ts-4, sy+ts//2), 1)
+        # ATM machine — steel casing, screen, keypad, card/cash slots
+        # Steel outer casing
+        pygame.draw.rect(surf, (148, 152, 162), pygame.Rect(sx+3, sy+2, ts-6, ts-4), border_radius=2)
+        pygame.draw.rect(surf, (100, 104, 114), pygame.Rect(sx+3, sy+2, ts-6, ts-4), border_radius=2, width=1)
+        # Bank logo bar (blue)
+        pygame.draw.rect(surf, (20, 50, 158), pygame.Rect(sx+5, sy+4, ts-10, 7))
+        # Screen with animated blue-grey glow
+        sg = int(38 + 22 * math.sin(t_ms / 780.0))
+        pygame.draw.rect(surf, (sg, sg + 14, sg + 38), pygame.Rect(sx+5, sy+12, ts-10, 13))
+        pygame.draw.rect(surf, (72, 78, 98), pygame.Rect(sx+5, sy+12, ts-10, 13), width=1)
+        # Green "online" indicator dot
+        pygame.draw.circle(surf, (0, 212, 72), (sx + ts - 8, sy + 5), 2)
+        # Card slot (dark horizontal slit beside screen)
+        pygame.draw.rect(surf, (52, 56, 66), pygame.Rect(sx + ts - 14, sy + 14, 8, 2))
+        # 3×3 keypad grid
+        for row in range(3):
+            for col in range(3):
+                kx = sx + 7 + col * 8
+                ky = sy + 28 + row * 6
+                pygame.draw.rect(surf, (118, 122, 132), pygame.Rect(kx, ky, 6, 4), border_radius=1)
+        # Function keys (two side buttons beside screen)
+        pygame.draw.rect(surf, (90, 94, 104), pygame.Rect(sx+3, sy+14, 3, 5))
+        pygame.draw.rect(surf, (90, 94, 104), pygame.Rect(sx+3, sy+20, 3, 5))
+        # Cash dispenser slot at bottom
+        pygame.draw.rect(surf, (52, 56, 66), pygame.Rect(sx+6, sy+ts-7, ts-13, 3))
     elif tile == RP:
         pygame.draw.rect(surf, (148, 28, 38), pygame.Rect(sx, sy, ts, ts))
         pygame.draw.line(surf, (88, 18, 28), (sx, sy+ts-1), (sx+ts, sy+ts-1), 2)
@@ -1238,3 +1857,30 @@ def _decorate(surf, sx, sy, ts, tile, tx, ty, fnt_s, economy):
         pygame.draw.rect(surf, (210, 188, 55), pygame.Rect(sx+4, sy+8, ts-9, ts-16), border_radius=2)
         pygame.draw.rect(surf, (178, 158, 42), pygame.Rect(sx+4, sy+8, ts-9, ts-16), border_radius=2, width=1)
         pygame.draw.rect(surf, (98, 88, 65), pygame.Rect(sx+ts//2-2, sy+ts-10, 4, 10))
+    elif tile == GW:
+        # Graffiti wall — colourful spray-painted tags on concrete
+        pygame.draw.rect(surf, (78, 74, 88), pygame.Rect(sx, sy, ts, ts))
+        # Horizontal concrete block lines
+        pygame.draw.line(surf, (92, 88, 104), (sx, sy+ts//3), (sx+ts, sy+ts//3), 1)
+        pygame.draw.line(surf, (92, 88, 104), (sx, sy+2*ts//3), (sx+ts, sy+2*ts//3), 1)
+        pygame.draw.line(surf, (92, 88, 104), (sx+ts//2, sy), (sx+ts//2, sy+ts), 1)
+        # Graffiti colour patches (deterministic from tile hash)
+        graffiti_cols = [
+            (255, 60, 80), (255, 200, 40), (40, 210, 100),
+            (80, 160, 255), (220, 80, 255), (255, 140, 40),
+        ]
+        for i in range(4):
+            gc = graffiti_cols[(h + i * 7) % len(graffiti_cols)]
+            gx2 = sx + ((h + i * 41) % (ts - 12)) + 4
+            gy2 = sy + ((h + i * 67) % (ts - 10)) + 4
+            gw2 = 8 + (h + i * 29) % 12
+            gh2 = 5 + (h + i * 53) % 8
+            pygame.draw.rect(surf, gc, pygame.Rect(gx2, gy2, gw2, gh2))
+        # Thin tag lines over the blocks
+        for i in range(3):
+            lc = graffiti_cols[(h + i * 13 + 2) % len(graffiti_cols)]
+            lx1 = sx + ((h + i * 23) % (ts - 8)) + 2
+            ly1 = sy + ((h + i * 37) % (ts - 6)) + 3
+            lx2 = lx1 + ((h + i * 19) % 20) - 10
+            ly2 = ly1 + ((h + i * 31) % 14) - 7
+            pygame.draw.line(surf, lc, (lx1, ly1), (lx2, ly2), 2)

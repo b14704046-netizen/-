@@ -237,13 +237,13 @@ def draw_hud(surf, economy, fnt_s, scene_name, near_interaction, quest_log):
     unemp_label, unemp_col = economy.unemp_label()
 
     panels = [
-        (f"📍 {_scene_label(scene_name)}", config.LIGHT_GRAY),
-        (f"📅 第 {snap['month']}/{config.WIN_MONTHS} 月", config.LIGHT_GRAY),
-        (f"📈 CPI: {snap['cpi']:.1f}%  {inf_label}", inf_col),
-        (f"💼 失業: {snap['unemployment']:.1f}%  {unemp_label}", unemp_col),
-        (f"💰 利率: {snap['ffr']:.2f}%", config.TERMINAL_AMBER),
-        (f"🏦 BS: ${snap.get('balance_sheet', 8.5):.1f}T", (100, 180, 255)),
-        (f"❤ 支持度: {snap['approval']:.0f}%", config.GREEN if snap['approval'] > 40 else config.RED),
+        (f"{_scene_label(scene_name)}", config.LIGHT_GRAY),
+        (f"第 {snap['month']}/{config.WIN_MONTHS} 月", config.LIGHT_GRAY),
+        (f"CPI: {snap['cpi']:.1f}%  {inf_label}", inf_col),
+        (f"失業: {snap['unemployment']:.1f}%  {unemp_label}", unemp_col),
+        (f"利率: {snap['ffr']:.2f}%", config.TERMINAL_AMBER),
+        (f"BS: ${snap.get('balance_sheet', 8.5):.1f}T", (100, 180, 255)),
+        (f"支持度: {snap['approval']:.0f}%", config.GREEN if snap['approval'] > 40 else config.RED),
     ]
     for i, (text, col) in enumerate(panels):
         t = fnt_s.render(text, True, col)
@@ -253,7 +253,7 @@ def draw_hud(surf, economy, fnt_s, scene_name, near_interaction, quest_log):
         surf.blit(t, (14, 11 + i * 26))
 
     # Phone hint (bottom-right)
-    ph = fnt_s.render("📱 [ P ] 手機", True, config.TERMINAL_AMBER)
+    ph = fnt_s.render("[ P ] 手機", True, config.TERMINAL_AMBER)
     ph_bg = pygame.Surface((ph.get_width()+16, ph.get_height()+8), pygame.SRCALPHA)
     ph_bg.fill((0, 0, 0, 180))
     surf.blit(ph_bg, (W - ph_bg.get_width() - 10, config.SCREEN_H - 36))
@@ -262,7 +262,7 @@ def draw_hud(surf, economy, fnt_s, scene_name, near_interaction, quest_log):
     # Pending quests in top-right
     pending = quest_log.pending()[:4]
     if pending:
-        title = fnt_s.render("📋 任務 [ Q ]", True, config.TERMINAL_AMBER)
+        title = fnt_s.render("任務 [ Q ]", True, config.TERMINAL_AMBER)
         bg = pygame.Surface((title.get_width()+12, title.get_height()+6), pygame.SRCALPHA)
         bg.fill((0,0,0,180))
         surf.blit(bg, (W - bg.get_width() - 10, 8))
@@ -288,7 +288,7 @@ def draw_hud(surf, economy, fnt_s, scene_name, near_interaction, quest_log):
     if snap["cpi"] > 10:
         t = pygame.time.get_ticks() // 500
         if t % 2 == 0:
-            alarm = fnt_s.render("⚠ 通膨失控警報！立刻升息！", True, config.RED)
+            alarm = fnt_s.render("通膨失控警報！立刻升息！", True, config.RED)
             surf.blit(alarm, (W//2 - alarm.get_width()//2, 8))
 
 
@@ -440,12 +440,12 @@ def draw_win(surf, economy, fnt, fnt_big, fnt_s):
     st = fnt.render("你成功達成軟著陸——通膨受控，經濟穩健成長！", True, config.WHITE)
     surf.blit(st, (W//2 - st.get_width()//2, H//4 + 80))
 
-    dove = fnt_big.render("🕊  鮑威爾在公園安詳地餵鴿子  🕊", True, config.TERMINAL_GREEN)
+    dove = fnt_big.render("鮑威爾在公園安詳地餵鴿子", True, config.TERMINAL_GREEN)
     surf.blit(dove, (W//2 - dove.get_width()//2, H//2 - 30))
 
     bs_val = snap.get("balance_sheet", 8.5)
     stats = [
-        f"最終通膨率：{snap['cpi']:.1f}%  ✓",
+        f"最終通膨率：{snap['cpi']:.1f}%",
         f"最終失業率：{snap['unemployment']:.1f}%",
         f"在位月數：{snap['month']} 個月",
         f"最終支持度：{snap['approval']:.0f}%",
@@ -484,6 +484,7 @@ def draw_menu(surf, fnt, fnt_big, fnt_s):
         "",
         "WASD / 方向鍵：移動",
         "E：互動（門/NPC/物件）",
+        "滑鼠左鍵：射擊（需裝備手槍）    Tab：切換武器（手槍 / 拳頭）",
         "P：開啟手機（隨時隨地調整利率與資產負債表）",
         "Q：開啟任務日誌",
         "SPACE / Enter：對話、確認    ESC：取消",
@@ -511,13 +512,13 @@ def draw_quest_log(surf, quest_log, fnt, fnt_big, fnt_s):
     pygame.draw.rect(surf, (20, 25, 40), pygame.Rect(bx, by, bw, bh), border_radius=10)
     pygame.draw.rect(surf, config.TERMINAL_AMBER, pygame.Rect(bx, by, bw, bh), border_radius=10, width=2)
 
-    t = fnt_big.render("📋 任務日誌", True, config.TERMINAL_AMBER)
+    t = fnt_big.render("任務日誌", True, config.TERMINAL_AMBER)
     surf.blit(t, (bx + bw//2 - t.get_width()//2, by + 24))
 
     y = by + 90
     for q in quest_log.quests:
         col = config.GREEN if q.done else config.WHITE
-        mark = "✓" if q.done else "○"
+        mark = "[V]" if q.done else "[ ]"
         head = fnt.render(f"{mark} {q.title}", True, col)
         surf.blit(head, (bx + 30, y))
         desc = fnt_s.render(q.desc, True, config.LIGHT_GRAY)
@@ -568,12 +569,12 @@ def draw_phone(surf, economy, fnt, fnt_big, fnt_s):
     t_str = _dt.datetime.now().strftime("%H:%M")
     tt = fnt_s.render(t_str, True, config.TERMINAL_GREEN)
     surf.blit(tt, (px + 14, py + 6))
-    bat = fnt_s.render("📶 5G   🔋", True, config.TERMINAL_GREEN)
+    bat = fnt_s.render("5G ", True, config.TERMINAL_GREEN)
     surf.blit(bat, (px + pw - bat.get_width() - 14, py + 6))
 
     # App 標頭
     pygame.draw.rect(surf, (20, 28, 44), pygame.Rect(px, py + 28, pw, 56))
-    app = fnt.render("📱 FED Mobile", True, config.TERMINAL_AMBER)
+    app = fnt.render("FED Mobile", True, config.TERMINAL_AMBER)
     surf.blit(app, (px + pw//2 - app.get_width()//2, py + 40))
     sub = fnt_s.render("聯準會政策控制中心", True, config.TERMINAL_DIM)
     surf.blit(sub, (px + pw//2 - sub.get_width()//2, py + 64))
@@ -1001,6 +1002,169 @@ def draw_intro(surf, slide_idx, slide_t, fnt, fnt_big, fnt_s):
         r = 7 if i == slide_idx else 4
         c = accent if i == slide_idx else (50, 50, 70)
         pygame.draw.circle(surf, c, (dx, H - 44), r)
+
+
+def draw_guitar_video(surf, fnt, fnt_big, fnt_s, t):
+    W, H = config.SCREEN_W, config.SCREEN_H
+    surf.fill((12, 4, 4))
+
+    # Scanline texture
+    for ly in range(0, H, 4):
+        pygame.draw.line(surf, (0, 0, 0), (0, ly), (W, ly), 1)
+
+    # Falling snowflakes (deterministic via sin/cos so no random seed needed)
+    for i in range(72):
+        phase = i * 2.618
+        sx = (math.cos(phase) * W * 0.48 + W * 0.5 + t * (12 + i % 8)) % W
+        sy = (math.sin(phase * 1.3) * H * 0.38 + H * 0.5 + t * (22 + i % 14)) % H
+        sr = 2 + (i % 3)
+        pygame.draw.circle(surf, (210, 230, 255), (int(sx), int(sy)), sr)
+
+    # Stage spotlights
+    for i in range(3):
+        angle = math.sin(t * 0.8 + i * 2.1) * 0.4
+        lx = W // 4 + i * W // 4
+        pts = [
+            (lx, 0),
+            (lx + int(110 * math.sin(angle + 0.35)), H // 2),
+            (lx + int(110 * math.sin(angle - 0.35)), H // 2),
+        ]
+        light = pygame.Surface((W, H), pygame.SRCALPHA)
+        pygame.draw.polygon(light, (255, 210, 120, 18), pts)
+        surf.blit(light, (0, 0))
+
+    # Banner
+    pygame.draw.rect(surf, (110, 8, 8), pygame.Rect(0, 28, W, 66))
+    pygame.draw.line(surf, (200, 20, 20), (0, 28), (W, 28), 2)
+    pygame.draw.line(surf, (200, 20, 20), (0, 93), (W, 93), 2)
+    title_t = fnt_big.render("All I Want for Christmas Is You", True, config.GOLD)
+    surf.blit(title_t, (W // 2 - title_t.get_width() // 2, 36))
+    sub_t = fnt_s.render("Mariah Carey  /  演奏：鮑威爾（聖誕女郎特別版）", True, config.PINK)
+    surf.blit(sub_t, (W // 2 - sub_t.get_width() // 2, 72))
+
+    # Character center position with body-bob
+    pcx = W // 2
+    pcy = H // 2 + 20 + int(5 * math.sin(t * 4.2))
+
+    # Christmas dress (red trapezoid)
+    pygame.draw.polygon(surf, (190, 18, 18), [
+        (pcx - 22, pcy - 10),
+        (pcx + 22, pcy - 10),
+        (pcx + 36, pcy + 70),
+        (pcx - 36, pcy + 70),
+    ])
+    # White fur trim at dress top and hem
+    pygame.draw.polygon(surf, config.WHITE, [
+        (pcx - 22, pcy - 10),
+        (pcx + 22, pcy - 10),
+        (pcx + 24, pcy - 2),
+        (pcx - 24, pcy - 2),
+    ])
+    pygame.draw.rect(surf, config.WHITE, pygame.Rect(pcx - 36, pcy + 62, 72, 10), border_radius=4)
+
+    # Head
+    pygame.draw.circle(surf, (215, 175, 128), (pcx, pcy - 28), 20)
+
+    # Gray-white hair (sides + slight top tuft visible under hat)
+    hair_col = (210, 210, 215)
+    pygame.draw.ellipse(surf, hair_col, pygame.Rect(pcx - 20, pcy - 44, 12, 18))  # left side
+    pygame.draw.ellipse(surf, hair_col, pygame.Rect(pcx + 8,  pcy - 44, 12, 18))  # right side
+    pygame.draw.ellipse(surf, hair_col, pygame.Rect(pcx - 8,  pcy - 48, 16, 8))   # top tuft
+
+    # Santa hat
+    pygame.draw.polygon(surf, (190, 18, 18), [
+        (pcx - 16, pcy - 45),
+        (pcx + 16, pcy - 45),
+        (pcx + 6,  pcy - 76),
+    ])
+    pygame.draw.rect(surf, config.WHITE, pygame.Rect(pcx - 18, pcy - 48, 36, 8), border_radius=4)
+    pygame.draw.circle(surf, config.WHITE, (pcx + 6, pcy - 76), 5)
+
+    # Eyes
+    pygame.draw.circle(surf, (40, 25, 15), (pcx - 7, pcy - 31), 3)
+    pygame.draw.circle(surf, (40, 25, 15), (pcx + 7, pcy - 31), 3)
+
+    # Glasses (thin gold frames)
+    glass_col = (180, 150, 60)
+    pygame.draw.rect(surf, glass_col, pygame.Rect(pcx - 16, pcy - 35, 12, 9), border_radius=2, width=2)
+    pygame.draw.rect(surf, glass_col, pygame.Rect(pcx + 4,  pcy - 35, 12, 9), border_radius=2, width=2)
+    pygame.draw.line(surf, glass_col, (pcx - 4, pcy - 31), (pcx + 4, pcy - 31), 1)  # bridge
+    pygame.draw.line(surf, glass_col, (pcx - 16, pcy - 31), (pcx - 20, pcy - 29), 1)  # left arm
+    pygame.draw.line(surf, glass_col, (pcx + 16, pcy - 31), (pcx + 20, pcy - 29), 1)  # right arm
+
+    # Smile
+    pygame.draw.arc(surf, (180, 80, 80),
+                    pygame.Rect(pcx - 9, pcy - 20, 18, 10),
+                    math.pi, 0, 2)
+
+    # Left arm (holding guitar neck)
+    pygame.draw.line(surf, (215, 175, 128),
+                     (pcx - 22, pcy - 4),
+                     (pcx - 58, pcy + 28), 6)
+
+    # Right arm (strumming — oscillates)
+    strum = int(10 * math.sin(t * 8.5))
+    pygame.draw.line(surf, (215, 175, 128),
+                     (pcx + 22, pcy - 4),
+                     (pcx + 52 + strum, pcy + 38), 6)
+
+    # Guitar body (figure-8, left of center)
+    gx, gy = pcx - 68, pcy + 10
+    pygame.draw.ellipse(surf, (110, 62, 18), pygame.Rect(gx, gy, 52, 38))
+    pygame.draw.ellipse(surf, (110, 62, 18), pygame.Rect(gx + 6, gy - 24, 40, 30))
+    pygame.draw.ellipse(surf, (150, 85, 28), pygame.Rect(gx + 2, gy + 2, 48, 34), width=2)
+    # Sound hole
+    pygame.draw.circle(surf, (55, 28, 8), (gx + 26, gy + 19), 9)
+    pygame.draw.circle(surf, (80, 40, 12), (gx + 26, gy + 19), 9, width=1)
+    # Neck (going up-left to left hand)
+    pygame.draw.rect(surf, (90, 52, 12), pygame.Rect(gx + 18, gy - 24 - 68, 16, 72))
+    # Frets
+    for fi in range(4):
+        fy = gy - 24 - 60 + fi * 16
+        pygame.draw.line(surf, (180, 140, 60), (gx + 18, fy), (gx + 34, fy), 1)
+    # Strings (vibrating)
+    for si in range(3):
+        sx_s = gx + 22 + si * 5
+        vib = int(3 * math.sin(t * 14.0 + si * 1.8))
+        pygame.draw.line(surf, (200, 190, 110),
+                         (sx_s, gy - 24 - 60),
+                         (sx_s + vib, gy + 34), 1)
+
+    # Floating music notes
+    note_syms = ["#", "~", "o", "*", "#", "~", "o", "*"]
+    note_cols = [
+        config.GOLD, config.PINK, (180, 100, 240), config.WHITE,
+        config.PINK, config.GOLD, config.WHITE, (180, 100, 240),
+    ]
+    for i in range(8):
+        angle_n = t * 0.55 + i * 0.785
+        orbit_x = pcx + int((260 + 40 * math.cos(angle_n * 1.3)) * math.cos(angle_n))
+        orbit_y = pcy - 20 + int((130 + 20 * math.sin(angle_n * 0.9)) * math.sin(angle_n))
+        if 0 <= orbit_x < W and 0 <= orbit_y < H:
+            nt = fnt.render(note_syms[i], True, note_cols[i])
+            scale = 0.7 + 0.3 * math.sin(t * 1.5 + i)
+            if scale > 0.5:
+                surf.blit(nt, (orbit_x, orbit_y))
+
+    # Progress bar
+    total = 28.0
+    prog = min(1.0, t / total)
+    pygame.draw.rect(surf, (50, 12, 12), pygame.Rect(60, H - 44, W - 120, 10), border_radius=5)
+    pygame.draw.rect(surf, (200, 20, 20), pygame.Rect(60, H - 44, int((W - 120) * prog), 10), border_radius=5)
+    elapsed = fnt_s.render(f"{int(t // 60):02d}:{int(t % 60):02d}", True, config.LIGHT_GRAY)
+    surf.blit(elapsed, (60, H - 60))
+    dur = fnt_s.render(f"0:28", True, config.LIGHT_GRAY)
+    surf.blit(dur, (W - 60 - dur.get_width(), H - 60))
+
+    # LIVE badge
+    if int(t * 2) % 2 == 0:
+        pygame.draw.rect(surf, (160, 10, 10), pygame.Rect(W - 88, 32, 64, 24), border_radius=5)
+        live = fnt_s.render("LIVE", True, config.WHITE)
+        surf.blit(live, (W - 88 + 32 - live.get_width() // 2, 38))
+
+    # ESC hint
+    hint = fnt_s.render("[ ESC / Enter ]  關閉影片", True, (100, 100, 120))
+    surf.blit(hint, (W // 2 - hint.get_width() // 2, H - 24))
 
 
 def apply_economic_tint(surf, economy):

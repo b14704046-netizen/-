@@ -6,7 +6,7 @@ import config
 import sounds
 from economy_core import EconomyState
 from entities import Player, Camera, Bullet, Enemy
-from scenes import build_all_scenes, draw_scene
+from scenes import build_all_scenes, draw_scene, draw_city_signs
 from manager import GameManager
 from dialog import get_dialog, draw_dialog
 from minigames import create_minigame, draw_result
@@ -18,6 +18,7 @@ from visual_fx import (
     apply_economic_tint, draw_phone,
     draw_combat_hud, draw_street_incident,
     draw_intro, INTRO_SLIDES,
+    draw_guitar_video,
 )
 
 
@@ -84,6 +85,7 @@ def main():
     enemies = []
     enemy_spawn_t = random.uniform(8.0, 14.0)
     walk_snd_t = 0.0
+    guitar_video_t = 0.0
 
     world_surf = pygame.Surface((config.SCREEN_W, config.SCREEN_H))
 
@@ -233,7 +235,7 @@ def main():
                                     import random as _r
                                     if _r.random() < 0.35:
                                         economy.approval = min(100, economy.approval + 1)
-                                        manager.post_message("硬幣落入水中... 願望成真！支持度 +1 ✨")
+                                        manager.post_message("硬幣落入水中... 願望成真！支持度 +1")
                                     else:
                                         manager.post_message("硬幣沉入水底... 願望石沉大海。")
                                 elif otype == "big_board":
@@ -253,7 +255,7 @@ def main():
                                 elif otype == "workout":
                                     economy.approval = min(100, economy.approval + 3)
                                     player.hp = min(player.max_hp, player.hp + 10)
-                                    manager.post_message("鍛煉完成！肌肉充實。支持度 +3 💪")
+                                    manager.post_message("鍛煉完成！肌肉充實。支持度 +3")
                                 elif otype == "policy_memo":
                                     taylor = (config.NEUTRAL_RATE
                                               + economy.cpi - config.TARGET_INFLATION)
@@ -277,18 +279,18 @@ def main():
                                         f"健康檢查完成！恢復 {heal} 血量。請多休息。")
                                 elif otype == "wifi_news":
                                     if economy.cpi > 7:
-                                        news = (f"📡 通膨 {economy.cpi:.1f}%！"
+                                        news = (f"[新聞] 通膨 {economy.cpi:.1f}%！"
                                                 "民眾搶購囤積！")
                                     elif economy.unemployment > 7:
-                                        news = (f"📡 失業率 {economy.unemployment:.1f}%！"
+                                        news = (f"[新聞] 失業率 {economy.unemployment:.1f}%！"
                                                 "就業市場警報！")
                                     elif economy.gdp < 0:
-                                        news = "📡 GDP 負成長！衰退陰影籠罩市場！"
+                                        news = "[新聞] GDP 負成長！衰退陰影籠罩市場！"
                                     elif economy.approval > 75:
-                                        news = (f"📡 民調：Powell 支持度 "
+                                        news = (f"[新聞] 民調：Powell 支持度 "
                                                 f"{economy.approval:.0f}%！軟著陸可期？")
                                     else:
-                                        news = (f"📡 FED 利率 {economy.ffr:.2f}%，"
+                                        news = (f"[新聞] FED 利率 {economy.ffr:.2f}%，"
                                                 "市場等待下次會議。")
                                     manager.post_message(news)
                                 elif otype == "phone_call":
@@ -300,7 +302,16 @@ def main():
                                     msg, gain = random.choice(opts)
                                     economy.approval = min(100, economy.approval + gain)
                                     manager.post_message(
-                                        f"☎  {msg} 支持度 +{gain}")
+                                        f"{msg} 支持度 +{gain}")
+                                elif otype == "guitar":
+                                    guitar_video_t = 0.0
+                                    state = config.STATE_GUITAR_VIDEO
+                                elif otype == "bicycle":
+                                    manager.post_message("這是鮑威爾的愛車，環保又健康！")
+                                elif otype == "golf":
+                                    current_minigame = create_minigame(config.MG_GOLF)
+                                    minigame_kind = "golf"
+                                    state = config.STATE_MINIGAME
                     elif ev.key == pygame.K_q:
                         state = config.STATE_QUEST
                     elif ev.key == pygame.K_p:
@@ -395,6 +406,7 @@ def main():
                             if result_screen.get("coffee"):
                                 player.coffee_level = min(
                                     3, player.coffee_level + result_screen["coffee"])
+                                player.coffee_drink_t = 3.0   # 觸發3秒喝咖啡動畫
                             if result_screen.get("inf_expect"):
                                 economy.cpi = max(
                                     0, economy.cpi + result_screen["inf_expect"])
@@ -429,6 +441,10 @@ def main():
 
                 elif state == config.STATE_QUEST:
                     if ev.key in (pygame.K_q, pygame.K_ESCAPE):
+                        state = config.STATE_WORLD
+
+                elif state == config.STATE_GUITAR_VIDEO:
+                    if ev.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
                         state = config.STATE_WORLD
 
                 elif state in (config.STATE_GAMEOVER, config.STATE_WIN):
@@ -478,6 +494,8 @@ def main():
         # ── Update ────────────────────────────────────────────────────
         if state == config.STATE_WORLD:
             player.update(dt, keys, scene)
+            if player.coffee_drink_t > 0:
+                player.coffee_drink_t = max(0.0, player.coffee_drink_t - dt)
             camera.update(player.x + player.w / 2,
                           player.y + player.h / 2, scene, dt)
             moving = any(keys[k] for k in (pygame.K_w, pygame.K_s, pygame.K_a,
@@ -605,6 +623,9 @@ def main():
                 transition = None
                 state = config.STATE_WORLD
 
+        elif state == config.STATE_GUITAR_VIDEO:
+            guitar_video_t += dt
+
         elif state == config.STATE_INTRO:
             intro_slide_t += dt
             if intro_slide_t >= INTRO_SLIDES[intro_slide]["timeout"]:
@@ -630,7 +651,11 @@ def main():
             for b in bullets:
                 b.draw(world_surf, cx, cy)
             apply_economic_tint(world_surf, economy)
-            screen.blit(world_surf, (0, 0))
+            # 像素藝術效果：半解析度縮小再放大，製造清晰像素顆粒感
+            _half = pygame.transform.scale(
+                world_surf, (config.SCREEN_W // 2, config.SCREEN_H // 2))
+            screen.blit(pygame.transform.scale(_half, (config.SCREEN_W, config.SCREEN_H)), (0, 0))
+            draw_city_signs(screen, scene, cx, cy, fnt_s)
 
             inter = player.find_interaction(
                 scene) if state == config.STATE_WORLD else None
@@ -675,6 +700,9 @@ def main():
 
         elif state == config.STATE_WIN:
             draw_win(screen, economy, fnt, fnt_big, fnt_s)
+
+        elif state == config.STATE_GUITAR_VIDEO:
+            draw_guitar_video(screen, fnt, fnt_big, fnt_s, guitar_video_t)
 
         elif state == config.STATE_INTRO:
             draw_intro(screen, intro_slide, intro_slide_t, fnt, fnt_big, fnt_s)

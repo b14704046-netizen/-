@@ -80,7 +80,7 @@ class CoffeeGame(MiniGame):
         W, H = config.SCREEN_W, config.SCREEN_H
         surf.fill((50, 30, 20))
         # Title
-        title = fnt_big.render("☕ 手沖鷹派咖啡", True, config.TERMINAL_AMBER)
+        title = fnt_big.render("手沖鷹派咖啡", True, config.TERMINAL_AMBER)
         surf.blit(title, (W//2 - title.get_width()//2, 60))
 
         stage_txt = fnt.render(f"階段 {self.stage+1}/4：{self.STAGES[min(self.stage, 3)]}", True, config.WHITE)
@@ -228,7 +228,7 @@ class PressGame(MiniGame):
                                (i*30 % W, (i*47) % H), 1)
 
         # Title
-        title = fnt_big.render("📰 聯準會記者會", True, config.TERMINAL_AMBER)
+        title = fnt_big.render("聯準會記者會", True, config.TERMINAL_AMBER)
         surf.blit(title, (W//2 - title.get_width()//2, 40))
 
         # After last question, skip question rendering — result screen will overlay
@@ -333,7 +333,7 @@ class PigeonGame(MiniGame):
             if best is not None:
                 best["caught"] = True
                 self.score += 1
-                self._feedback = "+1 🕊"
+                self._feedback = "+1"
                 self._feedback_t = 0.8
 
     def _finish(self):
@@ -363,7 +363,7 @@ class PigeonGame(MiniGame):
             pygame.draw.rect(surf, (80, 50, 30), pygame.Rect(tx, int(H*0.65), 20, 100))
             pygame.draw.circle(surf, (50, 130, 60), (tx + 10, int(H*0.65)), 50)
 
-        title = fnt_big.render("🕊 公園餵鴿子", True, (40, 70, 40))
+        title = fnt_big.render("公園餵鴿子", True, (40, 70, 40))
         surf.blit(title, (W//2 - title.get_width()//2, 20))
 
         # Powell
@@ -492,7 +492,7 @@ class TreadmillGame(MiniGame):
     def draw(self, surf, fnt, fnt_big, fnt_s):
         W, H = config.SCREEN_W, config.SCREEN_H
         surf.fill((30, 30, 40))
-        title = fnt_big.render("🏃 中性利率跑步機", True, config.TERMINAL_AMBER)
+        title = fnt_big.render("中性利率跑步機", True, config.TERMINAL_AMBER)
         surf.blit(title, (W//2 - title.get_width()//2, 30))
 
         # Two lanes
@@ -529,12 +529,197 @@ class TreadmillGame(MiniGame):
         surf.blit(nav, (W//2 - nav.get_width()//2, H - 30))
 
 
+# ── Golf Mini-Game ────────────────────────────────────────────────────
+class GolfGame(MiniGame):
+    """Top-down putting. LEFT/RIGHT to aim, hold SPACE to charge, release to putt."""
+    MAX_SHOTS = 6
+
+    def __init__(self):
+        super().__init__()
+        self.hole_x, self.hole_y = 0.72, 0.38
+        self.ball_x, self.ball_y = 0.18, 0.64
+        self.angle = -0.6
+        self.power = 0.0
+        self.charging = False
+        self.ball_vx, self.ball_vy = 0.0, 0.0
+        self.rolling = False
+        self.shots = 0
+        self.in_hole = False
+        self._feedback = ""
+        self._feedback_t = 0.0
+        self.t = 0.0
+
+    def update(self, dt, keys):
+        if self.done: return
+        self.t += dt
+        if self._feedback_t > 0:
+            self._feedback_t -= dt
+
+        if self.rolling:
+            self.ball_x += self.ball_vx * dt
+            self.ball_y += self.ball_vy * dt
+            fric = 1.2
+            self.ball_vx *= (1 - fric * dt)
+            self.ball_vy *= (1 - fric * dt)
+            # Boundary bounce
+            if self.ball_x < 0.06:
+                self.ball_vx = abs(self.ball_vx) * 0.5
+                self.ball_x = 0.06
+            if self.ball_x > 0.94:
+                self.ball_vx = -abs(self.ball_vx) * 0.5
+                self.ball_x = 0.94
+            if self.ball_y < 0.1:
+                self.ball_vy = abs(self.ball_vy) * 0.5
+                self.ball_y = 0.1
+            if self.ball_y > 0.9:
+                self.ball_vy = -abs(self.ball_vy) * 0.5
+                self.ball_y = 0.9
+            # In-hole check
+            dx = self.ball_x - self.hole_x
+            dy = self.ball_y - self.hole_y
+            if math.sqrt(dx * dx + dy * dy) < 0.030:
+                self.in_hole = True
+                self.rolling = False
+                self._feedback = f"進洞！{self.shots} 桿！"
+                self._feedback_t = 3.0
+                self._finish()
+                return
+            # Stopped
+            if math.sqrt(self.ball_vx ** 2 + self.ball_vy ** 2) < 0.008:
+                self.rolling = False
+                if self.shots >= self.MAX_SHOTS:
+                    self._finish()
+        else:
+            if not self.done:
+                if keys[pygame.K_LEFT]:
+                    self.angle -= 1.8 * dt
+                if keys[pygame.K_RIGHT]:
+                    self.angle += 1.8 * dt
+                if keys[pygame.K_SPACE]:
+                    self.charging = True
+                    self.power = min(1.0, self.power + 1.4 * dt)
+
+    def handle_event(self, ev):
+        if self.done: return
+        if ev.type == pygame.KEYUP and ev.key == pygame.K_SPACE and self.charging:
+            spd = self.power * 0.58
+            self.ball_vx = math.cos(self.angle) * spd
+            self.ball_vy = math.sin(self.angle) * spd
+            self.rolling = True
+            self.charging = False
+            self.shots += 1
+            self.power = 0.0
+        if ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE:
+            self._finish()
+
+    def _finish(self):
+        if self.in_hole:
+            if self.shots <= 2:
+                self.result = {"approval": +5, "msg": f"進洞！{self.shots} 桿！球技驚人！支持度 +5"}
+            elif self.shots <= 4:
+                self.result = {"approval": +3, "msg": f"進洞！{self.shots} 桿。支持度 +3"}
+            else:
+                self.result = {"approval": +1, "msg": f"終於進洞，{self.shots} 桿。支持度 +1"}
+        else:
+            self.result = {"approval": 0, "msg": f"球沒進洞，共打 {self.shots} 桿。繼續練習！"}
+        self.done = True
+
+    def draw(self, surf, fnt, fnt_big, fnt_s):
+        W, H = config.SCREEN_W, config.SCREEN_H
+        t_ms = pygame.time.get_ticks()
+        # Rough grass background
+        surf.fill((72, 138, 58))
+        # Main fairway ellipse
+        pygame.draw.ellipse(surf, (60, 168, 80),
+                            pygame.Rect(int(W * 0.05), int(H * 0.08),
+                                        int(W * 0.90), int(H * 0.84)))
+        # Putting green circle near hole
+        hx, hy = int(W * self.hole_x), int(H * self.hole_y)
+        pygame.draw.circle(surf, (80, 190, 95), (hx, hy), int(min(W, H) * 0.18))
+        # Sand bunker (left)
+        pygame.draw.ellipse(surf, (218, 196, 138),
+                            pygame.Rect(int(W * 0.08), int(H * 0.32),
+                                        int(W * 0.16), int(H * 0.14)))
+        # Sand bunker (lower right)
+        pygame.draw.ellipse(surf, (218, 196, 138),
+                            pygame.Rect(int(W * 0.52), int(H * 0.62),
+                                        int(W * 0.20), int(H * 0.16)))
+        # Water hazard (right)
+        pygame.draw.ellipse(surf, (52, 118, 178),
+                            pygame.Rect(int(W * 0.80), int(H * 0.44),
+                                        int(W * 0.14), int(H * 0.26)))
+        # Hole cup
+        pygame.draw.circle(surf, (14, 12, 8), (hx, hy), 14)
+        pygame.draw.circle(surf, (10, 8, 4), (hx, hy), 11)
+        # Flag pole + waving flag
+        pygame.draw.line(surf, (225, 212, 175), (hx, hy + 2), (hx, hy - 52), 2)
+        wave = int(4 * math.sin(t_ms / 260.0))
+        pygame.draw.polygon(surf, (225, 38, 38), [
+            (hx + 1, hy - 52),
+            (hx + 22 + wave, hy - 43),
+            (hx + 1, hy - 34),
+        ])
+        # Ball
+        bx, by = int(W * self.ball_x), int(H * self.ball_y)
+        pygame.draw.circle(surf, (255, 255, 255), (bx, by), 12)
+        pygame.draw.circle(surf, (210, 210, 205), (bx, by), 12, 1)
+        for di in range(6):
+            da = di * math.pi / 3 + self.t * 0.5
+            pygame.draw.circle(surf, (200, 200, 195),
+                               (bx + int(5 * math.cos(da)),
+                                by + int(5 * math.sin(da))), 2)
+        # Aim line when not rolling
+        if not self.rolling and not self.done:
+            for i in range(1, 12):
+                ax = bx + int(math.cos(self.angle) * i * 20)
+                ay = by + int(math.sin(self.angle) * i * 20)
+                if 0 < ax < W and 0 < ay < H:
+                    r_dot = max(1, 5 - i // 2)
+                    col = (255, 235, 60) if i % 2 == 0 else (255, 170, 20)
+                    pygame.draw.circle(surf, col, (ax, ay), r_dot)
+        # Power meter
+        if self.charging:
+            mx, my = W // 2, H - 72
+            bw2, bh2 = 260, 22
+            pygame.draw.rect(surf, (18, 18, 18),
+                             pygame.Rect(mx - bw2 // 2, my, bw2, bh2), border_radius=8)
+            r2 = int(60 + 170 * self.power)
+            g2 = int(210 * (1 - self.power * 0.85))
+            pygame.draw.rect(surf, (r2, g2, 38),
+                             pygame.Rect(mx - bw2 // 2, my, int(bw2 * self.power), bh2),
+                             border_radius=8)
+            pygame.draw.rect(surf, config.WHITE,
+                             pygame.Rect(mx - bw2 // 2, my, bw2, bh2),
+                             border_radius=8, width=2)
+            pt = fnt_s.render("力道", True, config.WHITE)
+            surf.blit(pt, (mx - pt.get_width() // 2, my - 24))
+        # Title
+        shadow = fnt_big.render("公寓高爾夫", True, (0, 0, 0))
+        title = fnt_big.render("公寓高爾夫", True, config.WHITE)
+        surf.blit(shadow, (W // 2 - title.get_width() // 2 + 2, 22))
+        surf.blit(title, (W // 2 - title.get_width() // 2, 20))
+        # Shot counter
+        sc = fnt.render(f"桿數：{self.shots}  /  最多 {self.MAX_SHOTS} 桿", True, config.TERMINAL_AMBER)
+        sc_bg = pygame.Surface((sc.get_width() + 14, sc.get_height() + 8), pygame.SRCALPHA)
+        sc_bg.fill((0, 0, 0, 190))
+        surf.blit(sc_bg, (12, 12))
+        surf.blit(sc, (19, 16))
+        # Feedback
+        if self._feedback_t > 0:
+            ft = fnt_big.render(self._feedback, True, config.TERMINAL_GREEN)
+            surf.blit(ft, (W // 2 - ft.get_width() // 2, H // 2 - 50))
+        # Nav
+        nav = fnt_s.render("← → 瞄準  SPACE 按住蓄力 / 放開擊球  ESC 放棄", True, config.TERMINAL_DIM)
+        surf.blit(nav, (W // 2 - nav.get_width() // 2, H - 30))
+
+
 def create_minigame(name):
     return {
         config.MG_COFFEE:    CoffeeGame,
         config.MG_PRESS:     PressGame,
         config.MG_PIGEON:    PigeonGame,
         config.MG_TREADMILL: TreadmillGame,
+        config.MG_GOLF:      GolfGame,
     }[name]()
 
 
@@ -549,7 +734,7 @@ def draw_result(surf, result, fnt, fnt_big, fnt_s):
     pygame.draw.rect(surf, (20, 30, 50), pygame.Rect(bx, by, bw, bh), border_radius=10)
     pygame.draw.rect(surf, config.TERMINAL_AMBER, pygame.Rect(bx, by, bw, bh), border_radius=10, width=2)
 
-    t = fnt_big.render("✓ 完成", True, config.TERMINAL_GREEN)
+    t = fnt_big.render("完成", True, config.TERMINAL_GREEN)
     surf.blit(t, (bx + bw//2 - t.get_width()//2, by + 30))
 
     msg = fnt.render(result.get("msg", ""), True, config.WHITE)

@@ -72,6 +72,9 @@ MG_COFFEE = "coffee"
 MG_PRESS = "press"
 MG_PIGEON = "pigeon"
 MG_TREADMILL = "treadmill"
+MG_GOLF = "golf"
+
+STATE_GUITAR_VIDEO = "guitar_video"
 
 # ── 資產負債表 (QE/QT) ──────────────────────────────────────────────────────
 INITIAL_BS      = 8.5    # 初始資產負債表規模（兆美元，對應 2022 年高點附近）

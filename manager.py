@@ -8,7 +8,7 @@ EVENTS = [
     # ── 國會施壓事件 ─────────────────────────────────────────────────────
     {
         "id": "congress_warren",
-        "title": "🏛 參議員 Warren 施壓！",
+        "title": "參議員 Warren 施壓！",
         "desc": "「失業率持續攀升，聯準會必須降息救市！你對工人有交代嗎？」",
         "condition": lambda e: e.unemployment > 6.5,
         "choices": [
@@ -20,7 +20,7 @@ EVENTS = [
     },
     {
         "id": "congress_cruz",
-        "title": "🏛 參議員 Cruz 施壓！",
+        "title": "參議員 Cruz 施壓！",
         "desc": "「通膨已嚴重侵蝕美國家庭！聯準會為何不積極升息？」",
         "condition": lambda e: e.cpi > 5.5,
         "choices": [
@@ -32,7 +32,7 @@ EVENTS = [
     },
     {
         "id": "congress_sanders",
-        "title": "🏛 參議員 Sanders 衝擊！",
+        "title": "參議員 Sanders 衝擊！",
         "desc": "「你的政策讓工人更窮！企業利潤創新高，工資卻追不上物價！」",
         "condition": lambda e: e.cpi > 4.0 and e.unemployment > 5.0,
         "choices": [
@@ -45,7 +45,7 @@ EVENTS = [
     # ── 原有事件 ──────────────────────────────────────────────────────────
     {
         "id": "oil_spike",
-        "title": "🛢 油價暴漲！",
+        "title": "油價暴漲！",
         "desc": "地緣衝突導致原油供應中斷，能源價格飆升。",
         "choices": [
             {"text": "緊急升息 0.5%",  "ffr": +0.5,  "inf": -0.3, "unemp": +0.3, "bubble": "利率太高了！"},
@@ -57,7 +57,7 @@ EVENTS = [
     },
     {
         "id": "bank_fail",
-        "title": "🏦 銀行倒閉危機！",
+        "title": "銀行倒閉危機！",
         "desc": "矽谷某大型銀行宣告倒閉，市場恐慌蔓延。",
         "choices": [
             {"text": "緊急降息救市",   "ffr": -0.5,  "inf": +0.5, "unemp": -0.5, "bubble": "謝謝主席！"},
@@ -69,7 +69,7 @@ EVENTS = [
     },
     {
         "id": "jobs_report",
-        "title": "📊 非農就業爆表！",
+        "title": "非農就業爆表！",
         "desc": "本月新增就業 80萬，遠超預期。勞動市場過熱。",
         "choices": [
             {"text": "積極升息 0.75%", "ffr": +0.75, "inf": -0.6, "unemp": +0.5, "bubble": "要失業了！"},
@@ -81,7 +81,7 @@ EVENTS = [
     },
     {
         "id": "recession_fear",
-        "title": "📉 衰退恐慌！",
+        "title": "衰退恐慌！",
         "desc": "GDP 連兩季負成長，輿論要求聯準會救市。",
         "choices": [
             {"text": "大幅降息 1%",    "ffr": -1.0,  "inf": +1.0, "unemp": -0.5, "bubble": "謝謝主席！"},
@@ -93,7 +93,7 @@ EVENTS = [
     },
     {
         "id": "supply_chain",
-        "title": "🚢 供應鏈斷裂！",
+        "title": "供應鏈斷裂！",
         "desc": "主要港口罷工，消費品短缺，價格飛漲。",
         "choices": [
             {"text": "升息壓制需求",   "ffr": +0.5,  "inf": -0.5, "unemp": +0.4, "bubble": "還是很貴！"},
@@ -105,7 +105,7 @@ EVENTS = [
     },
     {
         "id": "election",
-        "title": "🗳 政治壓力！",
+        "title": "政治壓力！",
         "desc": "選舉將近，政客要求降息刺激景氣，你怎麼看？",
         "choices": [
             {"text": "獨立運作，不理",  "ffr":  0.0, "inf":  0.0, "unemp":  0.0, "bubble": "尊重聯準會！"},
@@ -117,7 +117,7 @@ EVENTS = [
     },
     {
         "id": "tech_bubble",
-        "title": "💻 科技股泡沫！",
+        "title": "科技股泡沫！",
         "desc": "AI 概念股一夜跌 40%，市場恐慌！",
         "choices": [
             {"text": "鎮定發言安撫",     "ffr":  0.0, "inf":  0.0, "unemp": +0.2, "bubble": "主席太冷靜了！"},
@@ -129,7 +129,7 @@ EVENTS = [
     },
     {
         "id": "housing_crash",
-        "title": "🏠 房市崩盤警報！",
+        "title": "房市崩盤警報！",
         "desc": "全國房價單月下跌 8%，2008年陰影重現？",
         "choices": [
             {"text": "降息穩定房市",   "ffr": -0.5,  "inf": +0.5, "unemp": -0.3, "bubble": "請救救我們！"},
@@ -184,7 +184,7 @@ NPC_BUBBLES_SCENE = {
 STREET_INCIDENTS = [
     {
         "id": "protest_march",
-        "title": "🪧 抗議遊行爆發！",
+        "title": "抗議遊行爆發！",
         "desc": "通膨憤怒群眾湧上街頭，警察嚴陣以待...",
         "condition": lambda e: e.cpi > 5.5,
         "bubble": "物價太貴活不下去！",
@@ -193,7 +193,7 @@ STREET_INCIDENTS = [
     },
     {
         "id": "media_chase",
-        "title": "📷 媒體瘋狂追問！",
+        "title": "媒體瘋狂追問！",
         "desc": "你剛走出聯準會，記者群圍了上來……",
         "condition": lambda e: True,
         "bubble": "主席！請問利率何時調降？",
@@ -202,7 +202,7 @@ STREET_INCIDENTS = [
     },
     {
         "id": "food_panic",
-        "title": "🥚 超市哄搶事件！",
+        "title": "超市哄搶事件！",
         "desc": "蛋跟牛奶缺貨，民眾大排長龍引發衝突！",
         "condition": lambda e: e.cpi > 7.0,
         "bubble": "沒有蛋！都搶光了！",
@@ -211,7 +211,7 @@ STREET_INCIDENTS = [
     },
     {
         "id": "homeless_camp",
-        "title": "⛺ 街頭帳篷城出現！",
+        "title": "街頭帳篷城出現！",
         "desc": "失業人口暴增，街邊出現大型遊民聚集地。",
         "condition": lambda e: e.unemployment > 7.0,
         "bubble": "我已三個月沒工作了...",
@@ -220,7 +220,7 @@ STREET_INCIDENTS = [
     },
     {
         "id": "stock_crash_crowd",
-        "title": "📉 市場崩盤人心惶惶！",
+        "title": "市場崩盤人心惶惶！",
         "desc": "股市暴跌，路人紛紛站在電視前看盤。",
         "condition": lambda e: e.gdp < -2.0,
         "bubble": "我的退休金都沒了！",
@@ -229,7 +229,7 @@ STREET_INCIDENTS = [
     },
     {
         "id": "good_news_flash",
-        "title": "📰 軟著陸跡象出現！",
+        "title": "軟著陸跡象出現！",
         "desc": "財經媒體：CPI 下降，民眾信心回升！",
         "condition": lambda e: e.cpi < 3.0 and e.month > 6,
         "bubble": "也許經濟真的在好轉？",
@@ -238,7 +238,7 @@ STREET_INCIDENTS = [
     },
     {
         "id": "wall_st_bonus",
-        "title": "💰 華爾街發獎金！",
+        "title": "華爾街發獎金！",
         "desc": "市場復甦，金融業大發獎金，貧富差距擴大。",
         "condition": lambda e: e.gdp > 3.0 and e.cpi < 5.0,
         "bubble": "窮人苦，富人爽！",
@@ -247,7 +247,7 @@ STREET_INCIDENTS = [
     },
     {
         "id": "rate_hike_shock",
-        "title": "⚡ 升息震撼彈！",
+        "title": "升息震撼彈！",
         "desc": "剛宣布的升息決定令街頭民眾議論紛紛。",
         "condition": lambda e: e.ffr > 7.0,
         "bubble": "房貸利息高死了！",
