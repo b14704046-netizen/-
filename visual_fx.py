@@ -2,6 +2,19 @@ import pygame
 import math
 import config
 
+_mm_cache = {}       # (scene_name, has_interiors) -> cached Surface
+_minimap_font = None # lazy-initialised tiny CJK font for building labels
+
+def _get_minimap_font():
+    global _minimap_font
+    if _minimap_font is None:
+        try:
+            path = pygame.font.match_font("microsoftyahei,notosanscjk,arialunicode,arial")
+            _minimap_font = pygame.font.Font(path, 10) if path else pygame.font.SysFont("arial", 10)
+        except Exception:
+            _minimap_font = pygame.font.SysFont("arial", 10)
+    return _minimap_font
+
 
 def _bar(surf, x, y, w, h, value, vmin, vmax, good_range, colors, label, fnt):
     ratio = max(0.0, min(1.0, (value - vmin) / (vmax - vmin)))
@@ -328,6 +341,131 @@ def draw_combat_hud(surf, player, fnt_s):
     surf.blit(wt, (bx, by2 + 25))
 
 
+def draw_minimap(surf, scene, player, fnt_s, scenes=None):
+    """左下角小地圖：顯示當前場景地圖、建築內裝與玩家位置"""
+    from scenes import TILE_COLOR
+    H = config.SCREEN_H
+
+    max_map_w, max_map_h = 176, 110
+    tile_px = min(max_map_w / max(1, scene.cols), max_map_h / max(1, scene.rows))
+    map_w = max(1, int(tile_px * scene.cols))
+    map_h = max(1, int(tile_px * scene.rows))
+
+    panel_w = map_w + 10
+    panel_h = map_h + 30
+
+    px = 10
+    py = H - 88 - 14 - panel_h
+    map_x = px + 5
+    map_y = py + 24
+
+    # Panel background + border
+    bg = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
+    bg.fill((8, 10, 20, 205))
+    surf.blit(bg, (px, py))
+    pygame.draw.rect(surf, (68, 78, 108), pygame.Rect(px, py, panel_w, panel_h), width=1)
+
+    # Scene label
+    label = _scene_label(scene.name)
+    lt = fnt_s.render(label, True, config.TERMINAL_AMBER)
+    lx = px + 1 + max(0, (map_w + 8 - lt.get_width()) // 2)
+    surf.blit(lt, (lx, py + 4))
+
+    # ── Static map surface (cached per scene) ────────────────────────────
+    has_interiors = (scenes is not None and scene.name == config.SCENE_CITY)
+    cache_key = (scene.name, has_interiors)
+
+    if cache_key not in _mm_cache:
+        mm_surf = pygame.Surface((map_w, map_h))
+        mm_surf.fill((25, 28, 38))
+
+        # Draw base city / interior tiles
+        for ty in range(scene.rows):
+            for tx in range(scene.cols):
+                tile_id = scene.tiles[ty][tx]
+                col = TILE_COLOR.get(tile_id, (75, 75, 85))
+                col = (max(0, col[0] - 18), max(0, col[1] - 18), max(0, col[2] - 18))
+                x0t = int(tx * tile_px)
+                y0t = int(ty * tile_px)
+                tw = max(1, int((tx + 1) * tile_px) - x0t)
+                th = max(1, int((ty + 1) * tile_px) - y0t)
+                pygame.draw.rect(mm_surf, col, pygame.Rect(x0t, y0t, tw, th))
+
+        # For city: overlay each building's full interior tiles + label
+        if has_interiors:
+            from scenes import CITY_BUILDINGS
+            tiny = _get_minimap_font()
+            SHORT = {
+                config.SCENE_APARTMENT:   "公寓",
+                config.SCENE_CAFE:        "咖啡廳",
+                config.SCENE_FED:         "聯準會",
+                config.SCENE_SUPERMARKET: "超市",
+                config.SCENE_GYM:         "健身房",
+                config.SCENE_PRESS:       "新聞室",
+                config.SCENE_WALL_ST:     "華爾街",
+                config.SCENE_CAPITOL:     "國會",
+                config.SCENE_BANK:        "銀行",
+                config.SCENE_HOSPITAL:    "醫院",
+                config.SCENE_UNIVERSITY:  "大學",
+            }
+            for (bx0_t, by0_t, bx1_t, by1_t, _dx, _dy, sname) in CITY_BUILDINGS:
+                interior = scenes.get(sname)
+                if interior is None:
+                    continue
+                # Building footprint on minimap (tile coords are inclusive)
+                mm_bx0 = int(bx0_t * tile_px)
+                mm_by0 = int(by0_t * tile_px)
+                mm_bx1 = int((bx1_t + 1) * tile_px)
+                mm_by1 = int((by1_t + 1) * tile_px)
+                mm_bw = mm_bx1 - mm_bx0
+                mm_bh = mm_by1 - mm_by0
+                if mm_bw < 1 or mm_bh < 1:
+                    continue
+                # Scale interior tiles into the building footprint
+                ipx_x = mm_bw / max(1, interior.cols)
+                ipx_y = mm_bh / max(1, interior.rows)
+                for ity in range(interior.rows):
+                    for itx in range(interior.cols):
+                        tile_id = interior.tiles[ity][itx]
+                        col = TILE_COLOR.get(tile_id, (75, 75, 85))
+                        col = (max(0, col[0] - 10), max(0, col[1] - 10), max(0, col[2] - 10))
+                        ix0 = mm_bx0 + int(itx * ipx_x)
+                        iy0 = mm_by0 + int(ity * ipx_y)
+                        iw = max(1, int((itx + 1) * ipx_x) - int(itx * ipx_x))
+                        ih = max(1, int((ity + 1) * ipx_y) - int(ity * ipx_y))
+                        pygame.draw.rect(mm_surf, col, pygame.Rect(ix0, iy0, iw, ih))
+                # Building label (only if it fits)
+                short = SHORT.get(sname, "")
+                if short:
+                    lt_s = tiny.render(short, True, (255, 238, 170))
+                    if lt_s.get_width() <= mm_bw - 2 and lt_s.get_height() <= mm_bh - 2:
+                        lbx = mm_bx0 + (mm_bw - lt_s.get_width()) // 2
+                        lby = mm_by0 + (mm_bh - lt_s.get_height()) // 2
+                        lb_bg = pygame.Surface(
+                            (lt_s.get_width() + 2, lt_s.get_height() + 2), pygame.SRCALPHA)
+                        lb_bg.fill((0, 0, 0, 160))
+                        mm_surf.blit(lb_bg, (lbx - 1, lby - 1))
+                        mm_surf.blit(lt_s, (lbx, lby))
+
+        _mm_cache[cache_key] = mm_surf
+
+    # Blit cached static map
+    surf.blit(_mm_cache[cache_key], (map_x, map_y))
+
+    # Inner border (drawn over map, under player dot)
+    pygame.draw.rect(surf, (50, 58, 85),
+                     pygame.Rect(map_x - 1, map_y - 1, map_w + 2, map_h + 2), width=1)
+
+    # Player dot — redrawn every frame so it moves smoothly
+    pt_x = map_x + int((player.x + player.w / 2) / config.TILE_SIZE * tile_px)
+    pt_y = map_y + int((player.y + player.h / 2) / config.TILE_SIZE * tile_px)
+    pt_x = max(map_x + 2, min(map_x + map_w - 3, pt_x))
+    pt_y = max(map_y + 2, min(map_y + map_h - 3, pt_y))
+    dot_r = min(5, max(2, int(tile_px * 0.75)))
+    pygame.draw.circle(surf, (255, 55, 55), (pt_x, pt_y), dot_r)
+    pygame.draw.circle(surf, (255, 205, 205), (pt_x, pt_y), max(1, dot_r - 1))
+
+
 def _scene_label(name):
     return {
         config.SCENE_CITY:        "華盛頓特區",
@@ -340,6 +478,9 @@ def _scene_label(name):
         config.SCENE_CAPITOL:     "國會山莊",
         config.SCENE_WALL_ST:     "華爾街交易所",
         config.SCENE_GYM:         "Powell Fitness",
+        config.SCENE_BANK:        "聯邦銀行",
+        config.SCENE_HOSPITAL:    "聯邦醫療中心",
+        config.SCENE_UNIVERSITY:  "聯邦經濟大學",
     }.get(name, name)
 
 

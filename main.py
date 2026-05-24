@@ -17,7 +17,7 @@ from visual_fx import (
     draw_quest_log, draw_transition,
     apply_economic_tint, draw_phone,
     draw_combat_hud, draw_street_incident,
-    draw_intro, INTRO_SLIDES,
+    draw_intro, INTRO_SLIDES, draw_minimap,
 )
 
 
@@ -621,7 +621,7 @@ def main():
         elif state in (config.STATE_WORLD, config.STATE_EVENT, config.STATE_DIALOG, config.STATE_QUEST, config.STATE_TRANSITION, config.STATE_PHONE):
             cx, cy = camera.offset()
             world_surf.fill((25, 28, 34))
-            draw_scene(world_surf, scene, cx, cy, economy, fnt_s)
+            draw_scene(world_surf, scene, cx, cy, economy, fnt_s, scenes)
             for npc in scene.npcs:
                 npc.draw(world_surf, cx, cy, fnt_s)
             for enemy in enemies:
@@ -636,6 +636,7 @@ def main():
                 scene) if state == config.STATE_WORLD else None
             draw_hud(screen, economy, fnt_s, scene.name, inter, quests)
             draw_combat_hud(screen, player, fnt_s)
+            draw_minimap(screen, scene, player, fnt_s, scenes)
             draw_street_incident(screen, manager.street.current, fnt, fnt_s)
 
             # Manager message
