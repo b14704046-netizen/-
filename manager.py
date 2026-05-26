@@ -422,7 +422,9 @@ class GameManager:
 
         if self.message_t > 0:
             self.message_t -= dt
-
+    def post_message(self, text, duration=3.0):
+            self.message   = text
+            self.message_t = duration
     # [升級] 用於發布新聞跑馬燈，安撫或警告面對「政策時滯」的玩家
     def check_policy_news_flash(self, choice_data, event_data):
         """依據玩家剛剛的重大決策，推播即時財經新聞跑馬燈。"""
