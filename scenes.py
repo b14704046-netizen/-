@@ -60,7 +60,7 @@ TILE_COLOR = {
     B:   (88,  128, 192),
     S:   (152, 142, 130),
     C:   (142, 88,  108),
-    DR:  (188, 138, 72),
+    DR:  (55,  44,  32),
     TR:  (36,  98,  44),
     FT:  (72,  158, 198),
     BN:  (112, 72,  50),
@@ -1150,6 +1150,44 @@ def _bld_win_row(surf, fx, ftop, fw, floor_h, f, num_w, ww, wh, win_c):
                          pygame.Rect(wx, fy_f, ww, wh), 1)
 
 
+def _facade_double_door(surf, mid_x, gf, fh_fl, panel_col, frame_col,
+                        glass_col=(165, 205, 225)):
+    """Draw a pair of opening double doors on the ground floor of a facade."""
+    dw = fh_fl * 3 // 5
+    dh = fh_fl - 10
+    dx = mid_x - dw // 2
+    dy = gf + 6
+    lw = (dw - 2) // 2
+    rx = dx + lw + 2
+    rw = dw - lw - 2
+    gh = dh * 2 // 5          # glass pane height
+    ph = dh * 2 // 5          # lower panel height
+    py = dy + gh + 3           # lower panel y
+    knob = (210, 178, 45)
+    # Stone / frame surround
+    pygame.draw.rect(surf, frame_col,
+                     pygame.Rect(dx - 3, dy - 2, dw + 6, dh + 4), border_radius=3)
+    # Left leaf
+    pygame.draw.rect(surf, panel_col, pygame.Rect(dx, dy, lw, dh))
+    pygame.draw.rect(surf, glass_col, pygame.Rect(dx + 2, dy + 2, lw - 4, gh))
+    pygame.draw.rect(surf, frame_col,
+                     pygame.Rect(dx + 2, py, lw - 4, ph), border_radius=1)
+    pygame.draw.rect(surf, panel_col,
+                     pygame.Rect(dx + 2, py, lw - 4, ph), border_radius=1, width=1)
+    # Right leaf
+    pygame.draw.rect(surf, panel_col, pygame.Rect(rx, dy, rw, dh))
+    pygame.draw.rect(surf, glass_col, pygame.Rect(rx + 2, dy + 2, rw - 4, gh))
+    pygame.draw.rect(surf, frame_col,
+                     pygame.Rect(rx + 2, py, rw - 4, ph), border_radius=1)
+    pygame.draw.rect(surf, panel_col,
+                     pygame.Rect(rx + 2, py, rw - 4, ph), border_radius=1, width=1)
+    # Handles on inner edges
+    pygame.draw.circle(surf, knob, (dx + lw - 2, dy + dh * 3 // 5), 2)
+    pygame.draw.circle(surf, knob, (rx + 2,       dy + dh * 3 // 5), 2)
+    # Centre split
+    pygame.draw.line(surf, frame_col, (mid_x, dy), (mid_x, dy + dh), 2)
+
+
 def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
     fh_fl = ts          # pixels per floor
     wg = int(185 + 40 * math.sin(t_ms / 1100.0))
@@ -1180,17 +1218,14 @@ def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
             if f > 0:
                 pygame.draw.rect(surf, tuple(min(255, c + 12) for c in base_c),
                                  pygame.Rect(fx + 2, fy_f - 3, fw - 4, 3))
-        # Ground floor entrance
+        # Ground floor double-door entrance
         gf = fbot - fh_fl
-        dw, dh = ts // 2, fh_fl - 6
-        pygame.draw.rect(surf, (58, 36, 14), pygame.Rect(fx + 2, gf, fw - 4, 8))
-        pygame.draw.rect(surf, (78, 50, 26),
-                         pygame.Rect(fx + fw // 2 - dw // 2, gf + 10, dw, dh - 4),
-                         border_radius=2)
-        pygame.draw.rect(surf, (48, 28, 10),
-                         pygame.Rect(fx + fw // 2 - dw // 2, gf + 10, dw, dh - 4),
-                         border_radius=2, width=1)
-        pygame.draw.circle(surf, (200, 160, 40), (fx + fw // 2, gf + 8), 3)
+        mid_x = fx + fw // 2
+        pygame.draw.rect(surf, (48, 28, 10), pygame.Rect(fx + 2, gf, fw - 4, 7))
+        _facade_double_door(surf, mid_x, gf, fh_fl,
+                            panel_col=(88, 62, 28),
+                            frame_col=(42, 24, 8),
+                            glass_col=(170, 205, 225))
 
     elif style == "cafe":
         gf = fbot - fh_fl
@@ -1233,6 +1268,11 @@ def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
         pygame.draw.circle(surf, (0, 78, 46), (fx + fw // 2, gf + 4), 4)
         # Cornice line at top of ground floor
         pygame.draw.rect(surf, (0, 62, 36), pygame.Rect(fx, gf - 3, fw, 3))
+        # Double door in storefront centre
+        _facade_double_door(surf, fx + fw // 2, gf, fh_fl,
+                            panel_col=(0, 76, 42),
+                            frame_col=(0, 48, 26),
+                            glass_col=(155, 210, 190))
 
     elif style == "market":
         gf = fbot - fh_fl
@@ -1254,14 +1294,11 @@ def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
                          pygame.Rect(fx + 3, gf + 11, fw - 6, fh_fl - 14))
         pygame.draw.rect(surf, (78, 118, 138),
                          pygame.Rect(fx + 3, gf + 11, fw - 6, fh_fl - 14), 1)
-        # Sliding door divider
-        pygame.draw.line(surf, (78, 118, 138),
-                         (fx + fw // 2, gf + 11), (fx + fw // 2, gf + fh_fl - 3), 1)
-        for si in range(2):
-            sx2 = fx + 6 + si * (fw // 2 - 4)
-            pygame.draw.rect(surf, (98, 68, 38), pygame.Rect(sx2, gf + 20, fw // 2 - 10, 4))
-            pygame.draw.rect(surf, (198, 78, 38), pygame.Rect(sx2 + 2, gf + 16, 8, 4))
-            pygame.draw.rect(surf, (38, 178, 78), pygame.Rect(sx2 + 12, gf + 16, 8, 4))
+        # Double door in glass front
+        _facade_double_door(surf, fx + fw // 2, gf, fh_fl,
+                            panel_col=(128, 168, 188),
+                            frame_col=(58, 88, 108),
+                            glass_col=(175, 215, 235))
 
     elif style == "gym":
         seg_w = fw // 3
@@ -1284,11 +1321,11 @@ def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
         # Logo stripe at top of ground floor
         gf = fbot - fh_fl
         pygame.draw.rect(surf, (22, 36, 80), pygame.Rect(fx + 4, gf + 4, fw - 8, 6))
-        # Entrance: dark frame + double door
-        pygame.draw.rect(surf, (16, 24, 56),
-                         pygame.Rect(fx + fw // 2 - ts // 3, gf + 12, ts * 2 // 3, fh_fl - 14))
-        pygame.draw.line(surf, (40, 60, 140),
-                         (fx + fw // 2, gf + 12), (fx + fw // 2, gf + fh_fl - 2), 1)
+        # Double-door entrance
+        _facade_double_door(surf, fx + fw // 2, gf, fh_fl,
+                            panel_col=(28, 42, 105),
+                            frame_col=(14, 22, 56),
+                            glass_col=(120, 160, 220))
 
     elif style == "bank":
         col_sp = fw // 5
@@ -1321,6 +1358,12 @@ def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
             sx2 = fx + st * 4
             pygame.draw.rect(surf, tuple(min(255, c + 14 + st * 6) for c in base_c),
                              pygame.Rect(sx2, fbot - 6 - st * 3, fw - st * 8, 3))
+        # Double door at ground floor
+        gf = fbot - fh_fl
+        _facade_double_door(surf, fx + fw // 2, gf, fh_fl,
+                            panel_col=tuple(min(255, c + 12) for c in base_c),
+                            frame_col=tuple(max(0, c - 22) for c in base_c),
+                            glass_col=(205, 185, 110))
         # Eagle/emblem at pediment center
         mid_x = fx + fw // 2
         pygame.draw.circle(surf, (186, 154, 58), (mid_x, ftop + 8), 6)
@@ -1361,6 +1404,11 @@ def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
         for st in range(3):
             pygame.draw.rect(surf, tuple(min(255, c + 10 + st * 5) for c in base_c),
                              pygame.Rect(fx + st * 5, fbot - 5 - st * 3, fw - st * 10, 3))
+        # Double door at ground floor
+        _facade_double_door(surf, mid_x, gf, fh_fl,
+                            panel_col=tuple(min(255, c + 14) for c in base_c),
+                            frame_col=tuple(max(0, c - 24) for c in base_c),
+                            glass_col=(185, 195, 205))
 
     elif style == "press":
         for f in range(floors):
@@ -1378,6 +1426,11 @@ def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
         # News ticker strip at ground floor
         gf = fbot - fh_fl
         pygame.draw.rect(surf, (180, 30, 20), pygame.Rect(fx, gf + fh_fl - 12, fw, 8))
+        # Double door at ground floor entrance
+        _facade_double_door(surf, fx + fw // 2, gf, fh_fl,
+                            panel_col=tuple(min(255, c + 16) for c in base_c),
+                            frame_col=tuple(max(0, c - 20) for c in base_c),
+                            glass_col=(155, 170, 190))
         # Broadcast antenna at top center
         mid_x = fx + fw // 2
         pygame.draw.line(surf, tuple(min(255, c + 30) for c in base_c),
@@ -1418,6 +1471,11 @@ def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
         # Gold trim at entrance surround
         pygame.draw.rect(surf, (160, 138, 42),
                          pygame.Rect(mid_x - ew // 2 - 2, gf + 6, ew + 4, fh_fl - 7), 1)
+        # Double door inside arch
+        _facade_double_door(surf, mid_x, gf, fh_fl,
+                            panel_col=(18, 24, 48),
+                            frame_col=(6, 8, 16),
+                            glass_col=(80, 100, 140))
         # Spire at top
         pygame.draw.line(surf, tuple(min(255, c + 22) for c in base_c),
                          (mid_x, ftop - 1), (mid_x, ftop - ts // 2), 2)
@@ -1446,12 +1504,12 @@ def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
                          (fx + fw // 4, gf), (fx + fw // 4, gf + 8), 1)
         pygame.draw.line(surf, (60, 100, 180),
                          (fx + fw * 3 // 4, gf), (fx + fw * 3 // 4, gf + 8), 1)
-        # Sliding glass doors
+        # Double sliding-glass doors
         mid_x = fx + fw // 2
-        pygame.draw.rect(surf, (188, 218, 238),
-                         pygame.Rect(mid_x - ts // 2, gf + 8, ts, fh_fl - 10))
-        pygame.draw.line(surf, (78, 118, 198),
-                         (mid_x, gf + 8), (mid_x, gf + fh_fl - 2), 1)
+        _facade_double_door(surf, mid_x, gf, fh_fl,
+                            panel_col=(168, 208, 232),
+                            frame_col=(58, 98, 178),
+                            glass_col=(195, 225, 245))
 
     elif style == "capitol":
         col_sp = fw // 8
@@ -1473,6 +1531,12 @@ def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
         for si in range(3):
             pygame.draw.rect(surf, tuple(min(255, c + si * 6) for c in base_c),
                              pygame.Rect(fx + si * 5, fbot - si * 4 - 4, fw - si * 10, 4))
+        # Double door at base of columns
+        gf_cap = fbot - fh_fl
+        _facade_double_door(surf, mid_x, gf_cap, fh_fl,
+                            panel_col=tuple(min(255, c + 20) for c in base_c),
+                            frame_col=tuple(max(0, c - 30) for c in base_c),
+                            glass_col=(200, 195, 175))
         for f in range(1, floors - 1):
             _bld_win_row(surf, fx, ftop, fw, fh_fl, f, 4, ts // 2, ts // 2 + 4,
                          (wg - 42, wg - 32, 48))
@@ -1485,12 +1549,29 @@ def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
                             pygame.Rect(mid_x - dome_r, dome_y - dome_r // 2, dome_r * 2, dome_r), 1)
         pygame.draw.line(surf, tuple(min(255, c + 20) for c in base_c),
                          (mid_x, dome_y - dome_r // 2), (mid_x, dome_y - dome_r // 2 - ts // 3), 2)
-        # Flag (red/white/blue stripes)
+        # US flag — 6 horizontal red/white stripes + blue canton top-left
         pole_top = dome_y - dome_r // 2 - ts // 3
-        for fi in range(3):
-            fcol = [(218, 28, 28), (240, 240, 240), (28, 60, 168)][fi]
-            pygame.draw.rect(surf, fcol,
-                             pygame.Rect(mid_x + 1, pole_top + fi * 4, ts // 3, 4))
+        fw_flag = ts // 2 + 2
+        fh_flag = ts // 3
+        stripe_h = max(1, fh_flag // 6)
+        for si in range(6):
+            scol = (200, 20, 20) if si % 2 == 0 else (235, 235, 235)
+            pygame.draw.rect(surf, scol,
+                             pygame.Rect(mid_x + 1, pole_top + si * stripe_h,
+                                         fw_flag, stripe_h))
+        # Blue canton (top-left quarter of flag)
+        canton_w = fw_flag * 2 // 5
+        canton_h = stripe_h * 3
+        pygame.draw.rect(surf, (28, 50, 160),
+                         pygame.Rect(mid_x + 1, pole_top, canton_w, canton_h))
+        # Stars (3 tiny white dots in canton)
+        for si_r in range(2):
+            for si_c in range(2):
+                if si_r == 1 and si_c == 1:
+                    continue
+                pygame.draw.circle(surf, (235, 235, 235),
+                                   (mid_x + 2 + si_c * (canton_w // 2),
+                                    pole_top + 1 + si_r * (canton_h // 2)), 1)
 
     elif style == "university":
         bc = tuple(max(0, c - 12) for c in base_c)
@@ -1544,6 +1625,11 @@ def _bld_details(surf, fx, ftop, fw, fh, floors, fbot, style, base_c, ts, t_ms):
                             pygame.Rect(mid_x - aw // 2, gf + 2, aw, aw // 2), 1)
         pygame.draw.rect(surf, tuple(max(0, c - 30) for c in base_c),
                          pygame.Rect(mid_x - aw // 2, gf + 6, aw, fh_fl - 7), 1)
+        # Double door inside arch
+        _facade_double_door(surf, mid_x, gf, fh_fl,
+                            panel_col=tuple(min(255, c + 14) for c in base_c),
+                            frame_col=tuple(max(0, c - 28) for c in base_c),
+                            glass_col=(175, 185, 200))
 
 
 def _draw_building_facades(surf, cx, cy, ts, t_ms):
@@ -1677,11 +1763,42 @@ def _decorate(surf, sx, sy, ts, tile, tx, ty, fnt_s, economy):
         vx2 = sx + ((h >> 8) % (ts // 2)) + ts // 2
         pygame.draw.line(surf, (210, 205, 198), (sx, sy + (h >> 12) % ts), (vx2, sy + ts), 1)
     elif tile == DR:
-        pygame.draw.rect(surf, (148, 108, 52), pygame.Rect(sx+6, sy+4, ts-12, ts-8), border_radius=4)
-        hw = (ts - 16) // 2
-        pygame.draw.rect(surf, (120, 85, 38), pygame.Rect(sx+8, sy+6, hw-1, (ts-14)//2), border_radius=2)
-        pygame.draw.rect(surf, (120, 85, 38), pygame.Rect(sx+8+hw+1, sy+6, hw-1, (ts-14)//2), border_radius=2)
-        pygame.draw.circle(surf, (255, 220, 80), (sx + ts - 14, sy + ts//2), 3)
+        # Doorway arch / stone surround
+        arch_col  = (82, 72, 58)
+        frame_col = (105, 88, 62)
+        panel_col = (148, 112, 58)
+        dark_col  = (98, 74, 40)
+        glass_col = (170, 205, 225)
+        knob_col  = (215, 182, 50)
+        # Stone frame
+        pygame.draw.rect(surf, arch_col, pygame.Rect(sx+3, sy+2, ts-6, ts-4), border_radius=5)
+        # Inner doorway opening (dark)
+        pygame.draw.rect(surf, (35, 28, 20), pygame.Rect(sx+7, sy+4, ts-14, ts-7))
+        # Determine half-width for each door leaf
+        dw = (ts - 16) // 2    # each door leaf width (~16px)
+        dh = ts - 11           # door height
+        dt = sy + 4            # door top
+        dl = sx + 8            # left leaf x
+        dr_x = sx + 8 + dw + 2  # right leaf x
+        # Left door leaf
+        pygame.draw.rect(surf, panel_col, pygame.Rect(dl, dt, dw, dh))
+        pygame.draw.rect(surf, glass_col, pygame.Rect(dl+2, dt+2, dw-4, dh//2-3))     # glass pane top
+        pygame.draw.rect(surf, dark_col,  pygame.Rect(dl+2, dt+dh//2+1, dw-4, dh//3), border_radius=1)  # lower panel inset
+        pygame.draw.rect(surf, frame_col, pygame.Rect(dl+2, dt+dh//2+1, dw-4, dh//3), border_radius=1, width=1)
+        # Right door leaf
+        pygame.draw.rect(surf, panel_col, pygame.Rect(dr_x, dt, dw, dh))
+        pygame.draw.rect(surf, glass_col, pygame.Rect(dr_x+2, dt+2, dw-4, dh//2-3))
+        pygame.draw.rect(surf, dark_col,  pygame.Rect(dr_x+2, dt+dh//2+1, dw-4, dh//3), border_radius=1)
+        pygame.draw.rect(surf, frame_col, pygame.Rect(dr_x+2, dt+dh//2+1, dw-4, dh//3), border_radius=1, width=1)
+        # Gold handles on inner edges
+        pygame.draw.circle(surf, knob_col, (dl + dw - 3, dt + dh * 3 // 5), 2)
+        pygame.draw.circle(surf, knob_col, (dr_x + 3,    dt + dh * 3 // 5), 2)
+        # Centre split line
+        pygame.draw.line(surf, arch_col, (sx + ts//2, dt), (sx + ts//2, dt + dh), 2)
+        # Door frame outline
+        pygame.draw.rect(surf, frame_col, pygame.Rect(sx+3, sy+2, ts-6, ts-4), border_radius=5, width=1)
+        # Stone step at bottom
+        pygame.draw.rect(surf, (140, 130, 115), pygame.Rect(sx+2, sy+ts-6, ts-4, 5), border_radius=2)
     elif tile == T:
         pygame.draw.rect(surf, config.TERMINAL_BG, pygame.Rect(sx+4, sy+4, ts-9, ts-9), border_radius=3)
         pygame.draw.rect(surf, config.TERMINAL_GREEN, pygame.Rect(sx+4, sy+4, ts-9, ts-9), border_radius=3, width=1)
