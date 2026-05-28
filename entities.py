@@ -154,123 +154,154 @@ class Player:
     def draw(self, surf, cx, cy):
         sx, sy = int(self.x - cx), int(self.y - cy)
         leg = [0, 3, 0, -3][self._anim]
+        arm = [0, -2, 0, 2][self._anim]
 
-        # ── 陰影 ──────────────────────────────────────────────────────────
-        shd = pygame.Surface((20, 5), pygame.SRCALPHA)
-        shd.fill((0, 0, 0, 52))
-        surf.blit(shd, (sx + 2, sy + 30))
+        # Soft cast shadow on the ground (2.5D feel)
+        shadow = pygame.Surface((26, 7), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow, (0, 0, 0, 100), pygame.Rect(0, 0, 26, 7))
+        surf.blit(shadow, (sx + 3, sy + 30))
 
-        # ── 鞋子 ──────────────────────────────────────────────────────────
-        pygame.draw.rect(surf, (22, 18, 18), pygame.Rect(sx + 2,  sy + 29 + leg, 10, 4))
-        pygame.draw.rect(surf, (22, 18, 18), pygame.Rect(sx + 12, sy + 29 - leg, 10, 4))
+        # ── Legs: pressed black dress trousers + shiny shoes ─────────────
+        # Trousers
+        pygame.draw.rect(surf, (24, 26, 38),
+                         pygame.Rect(sx + 9, sy + 26, 5, 9 + leg))
+        pygame.draw.rect(surf, (24, 26, 38),
+                         pygame.Rect(sx + 18, sy + 26, 5, 9 - leg))
+        # Crease highlight
+        pygame.draw.line(surf, (62, 66, 88),
+                         (sx + 11, sy + 26), (sx + 11, sy + 33 + leg), 1)
+        pygame.draw.line(surf, (62, 66, 88),
+                         (sx + 20, sy + 26), (sx + 20, sy + 33 - leg), 1)
+        # Polished leather shoes
+        pygame.draw.ellipse(surf, (12, 12, 18),
+                            pygame.Rect(sx + 7, sy + 33 + leg, 9, 4))
+        pygame.draw.ellipse(surf, (12, 12, 18),
+                            pygame.Rect(sx + 16, sy + 33 - leg, 9, 4))
+        pygame.draw.line(surf, (95, 95, 115),
+                         (sx + 9, sy + 33 + leg), (sx + 14, sy + 33 + leg), 1)
+        pygame.draw.line(surf, (95, 95, 115),
+                         (sx + 18, sy + 33 - leg), (sx + 23, sy + 33 - leg), 1)
 
-        # ── 深色西褲 ──────────────────────────────────────────────────────
-        pygame.draw.rect(surf, (36, 36, 68), pygame.Rect(sx + 3,  sy + 19, 8, 12 + leg))
-        pygame.draw.rect(surf, (36, 36, 68), pygame.Rect(sx + 13, sy + 19, 8, 12 - leg))
-        pygame.draw.line(surf, (50, 50, 88), (sx + 7,  sy + 19), (sx + 7,  sy + 31 + leg), 1)
-        pygame.draw.line(surf, (50, 50, 88), (sx + 17, sy + 19), (sx + 17, sy + 31 - leg), 1)
-
-        # ── 西裝外套（深藍）─────────────────────────────────────────────
-        pygame.draw.rect(surf, (28, 52, 138), pygame.Rect(sx + 1, sy + 10, 22, 12), border_radius=2)
-
-        # ── 左臂 / 袖口 ──────────────────────────────────────────────────
-        pygame.draw.rect(surf, (28, 52, 138), pygame.Rect(sx - 4, sy + 11, 7, 10))
-        pygame.draw.rect(surf, (235, 235, 235), pygame.Rect(sx - 4, sy + 19, 7, 3))
-        pygame.draw.rect(surf, (210, 175, 128), pygame.Rect(sx - 4, sy + 21, 7, 5))
-
-        # ── 右臂 / 袖口（喝咖啡時會蓋住）─────────────────────────────────
-        _right_arm_raised = 0 < self.coffee_drink_t < 2.5
-        arm_dy = -int(min(1.0, (2.5 - self.coffee_drink_t) / 1.3) * 12) if _right_arm_raised else 0
-        pygame.draw.rect(surf, (28, 52, 138), pygame.Rect(sx + 21, sy + 11 + arm_dy, 7, 10))
-        pygame.draw.rect(surf, (235, 235, 235), pygame.Rect(sx + 21, sy + 19 + arm_dy, 7, 3))
-        pygame.draw.rect(surf, (210, 175, 128), pygame.Rect(sx + 21, sy + 21 + arm_dy, 7, 5))
-
-        # ── 白色領帶 / 領片 ──────────────────────────────────────────────
-        pygame.draw.rect(surf, (238, 238, 238), pygame.Rect(sx + 10, sy + 10, 4, 12))
-        pygame.draw.polygon(surf, (238, 238, 238), [(sx+10, sy+10), (sx+8,  sy+14), (sx+10, sy+14)])
-        pygame.draw.polygon(surf, (238, 238, 238), [(sx+14, sy+10), (sx+16, sy+14), (sx+14, sy+14)])
-
-        # ── 領口翻領 ─────────────────────────────────────────────────────
-        pygame.draw.polygon(surf, (38, 68, 162), [(sx+1,  sy+10), (sx+10, sy+17), (sx+1,  sy+21)])
-        pygame.draw.polygon(surf, (38, 68, 162), [(sx+23, sy+10), (sx+14, sy+17), (sx+23, sy+21)])
-
-        # ── 紅色領帶 ─────────────────────────────────────────────────────
-        pygame.draw.polygon(surf, (188, 20, 20), [
-            (sx+10, sy+11), (sx+14, sy+11),
-            (sx+15, sy+19), (sx+12, sy+23), (sx+9, sy+19),
+        # ── Suit body: dark navy with lapels + white shirt + red tie ─────
+        # Jacket main shape (slightly wider at shoulders)
+        pygame.draw.polygon(surf, (30, 38, 68), [
+            (sx + 4, sy + 17), (sx + 28, sy + 17),
+            (sx + 27, sy + 28), (sx + 5, sy + 28),
         ])
-        pygame.draw.line(surf, (152, 10, 10), (sx+12, sy+11), (sx+12, sy+23), 1)
+        # Shoulder highlight (sun-lit edge)
+        pygame.draw.line(surf, (62, 78, 125),
+                         (sx + 4, sy + 17), (sx + 28, sy + 17), 1)
+        # White dress-shirt collar triangle
+        pygame.draw.polygon(surf, (235, 238, 245), [
+            (sx + 13, sy + 16), (sx + 19, sy + 16),
+            (sx + 17, sy + 22), (sx + 15, sy + 22),
+        ])
+        # Lapels
+        pygame.draw.polygon(surf, (22, 28, 52), [
+            (sx + 9, sy + 17), (sx + 14, sy + 18),
+            (sx + 13, sy + 24), (sx + 8, sy + 22),
+        ])
+        pygame.draw.polygon(surf, (22, 28, 52), [
+            (sx + 23, sy + 17), (sx + 18, sy + 18),
+            (sx + 19, sy + 24), (sx + 24, sy + 22),
+        ])
+        # Lapel sheen
+        pygame.draw.line(surf, (78, 92, 138),
+                         (sx + 10, sy + 18), (sx + 12, sy + 22), 1)
+        pygame.draw.line(surf, (78, 92, 138),
+                         (sx + 22, sy + 18), (sx + 20, sy + 22), 1)
+        # Red silk tie (visible knot + body)
+        pygame.draw.polygon(surf, (190, 30, 35), [
+            (sx + 15, sy + 19), (sx + 17, sy + 19),
+            (sx + 18, sy + 23), (sx + 14, sy + 23),
+        ])
+        pygame.draw.polygon(surf, (175, 25, 30), [
+            (sx + 14, sy + 23), (sx + 18, sy + 23),
+            (sx + 17, sy + 28), (sx + 15, sy + 28),
+        ])
+        pygame.draw.line(surf, (240, 110, 100),
+                         (sx + 16, sy + 20), (sx + 16, sy + 27), 1)
+        # Gold lapel pin
+        pygame.draw.circle(surf, (255, 215, 80), (sx + 11, sy + 20), 1)
 
-        # ── 胸袋手帕 ─────────────────────────────────────────────────────
-        pygame.draw.rect(surf, (255, 255, 255), pygame.Rect(sx + 2, sy + 12, 5, 4))
-        pygame.draw.line(surf, (220, 220, 235), (sx+3, sy+12), (sx+5, sy+10), 1)
+        # ── Arms swinging at sides (skin tone cuff peek + jacket) ────────
+        pygame.draw.rect(surf, (30, 38, 68),
+                         pygame.Rect(sx + 3, sy + 18 + arm, 4, 9))
+        pygame.draw.rect(surf, (30, 38, 68),
+                         pygame.Rect(sx + 25, sy + 18 - arm, 4, 9))
+        # White shirt cuff
+        pygame.draw.rect(surf, (235, 238, 245),
+                         pygame.Rect(sx + 3, sy + 26 + arm, 4, 2))
+        pygame.draw.rect(surf, (235, 238, 245),
+                         pygame.Rect(sx + 25, sy + 26 - arm, 4, 2))
+        # Hand (skin tone)
+        pygame.draw.circle(surf, (218, 178, 142),
+                           (sx + 5, sy + 29 + arm), 2)
+        pygame.draw.circle(surf, (218, 178, 142),
+                           (sx + 27, sy + 29 - arm), 2)
 
-        # ── 頸部 ─────────────────────────────────────────────────────────
-        pygame.draw.rect(surf, (210, 175, 128), pygame.Rect(sx + 9, sy + 7, 6, 5))
+        # ── Neck + head ──────────────────────────────────────────────────
+        # Neck
+        pygame.draw.rect(surf, (200, 162, 130),
+                         pygame.Rect(sx + 14, sy + 14, 4, 3))
+        # Head (oval, slightly larger for a distinguished look)
+        pygame.draw.ellipse(surf, (220, 182, 148),
+                            pygame.Rect(sx + 8, sy + 1, 16, 16))
+        # Subtle jaw shadow
+        pygame.draw.line(surf, (190, 152, 122),
+                         (sx + 10, sy + 13), (sx + 22, sy + 13), 1)
 
-        # ── 頭部（膚色）─────────────────────────────────────────────────
-        pygame.draw.ellipse(surf, (210, 175, 128), pygame.Rect(sx + 3, sy + 0, 18, 14))
+        # ── Powell's signature silver hair (top half + side trim) ────────
+        # Top hair: silver with slight wave
+        pygame.draw.ellipse(surf, (215, 215, 220),
+                            pygame.Rect(sx + 7, sy + 0, 18, 9))
+        # Darker silver shading
+        pygame.draw.arc(surf, (175, 175, 185),
+                        pygame.Rect(sx + 7, sy + 0, 18, 12),
+                        3.4, 6.0, 2)
+        # Side hair (cropped short)
+        pygame.draw.rect(surf, (185, 185, 195),
+                         pygame.Rect(sx + 7, sy + 5, 2, 6))
+        pygame.draw.rect(surf, (185, 185, 195),
+                         pygame.Rect(sx + 23, sy + 5, 2, 6))
+        # Bright top highlight
+        pygame.draw.line(surf, (245, 245, 250),
+                         (sx + 11, sy + 2), (sx + 18, sy + 2), 1)
 
-        # ── 耳朵 ─────────────────────────────────────────────────────────
-        pygame.draw.ellipse(surf, (195, 158, 112), pygame.Rect(sx + 2,  sy + 5, 4, 6))
-        pygame.draw.ellipse(surf, (195, 158, 112), pygame.Rect(sx + 18, sy + 5, 4, 6))
+        # ── Face: eyebrows, eyes behind glasses, nose, mouth ─────────────
+        # Bushy gray eyebrows
+        pygame.draw.line(surf, (140, 140, 150),
+                         (sx + 10, sy + 8), (sx + 14, sy + 8), 2)
+        pygame.draw.line(surf, (140, 140, 150),
+                         (sx + 18, sy + 8), (sx + 22, sy + 8), 2)
+        # Rimless glasses (steel frames)
+        pygame.draw.circle(surf, (245, 248, 255), (sx + 12, sy + 10), 2)
+        pygame.draw.circle(surf, (95, 95, 110), (sx + 12, sy + 10), 2, 1)
+        pygame.draw.circle(surf, (245, 248, 255), (sx + 20, sy + 10), 2)
+        pygame.draw.circle(surf, (95, 95, 110), (sx + 20, sy + 10), 2, 1)
+        pygame.draw.line(surf, (95, 95, 110),
+                         (sx + 14, sy + 10), (sx + 18, sy + 10), 1)
+        # Pupils (small, look slightly forward/down)
+        pygame.draw.circle(surf, (38, 42, 55), (sx + 12, sy + 10), 1)
+        pygame.draw.circle(surf, (38, 42, 55), (sx + 20, sy + 10), 1)
+        # Nose (small triangle highlight)
+        pygame.draw.line(surf, (190, 152, 122),
+                         (sx + 16, sy + 11), (sx + 16, sy + 13), 1)
+        # Mouth (slight stern line)
+        pygame.draw.line(surf, (132, 88, 78),
+                         (sx + 14, sy + 14), (sx + 18, sy + 14), 1)
 
-        # ── 銀白髮型（Powell 特徵）────────────────────────────────────────
-        pygame.draw.ellipse(surf, (228, 228, 233), pygame.Rect(sx + 2, sy + 0, 20, 9))
-        pygame.draw.ellipse(surf, (212, 212, 220), pygame.Rect(sx + 3, sy + 1, 18, 7))
-        pygame.draw.line(surf, (195, 195, 208), (sx + 4, sy + 2), (sx + 20, sy + 2), 1)
-        pygame.draw.line(surf, (195, 195, 208), (sx + 3, sy + 4), (sx + 21, sy + 4), 1)
-
-        # ── 眼鏡（Powell 標誌性方框眼鏡）─────────────────────────────────
-        pygame.draw.rect(surf, (52, 52, 62), pygame.Rect(sx + 4,  sy + 7, 7, 5), width=1, border_radius=1)
-        pygame.draw.rect(surf, (52, 52, 62), pygame.Rect(sx + 13, sy + 7, 7, 5), width=1, border_radius=1)
-        pygame.draw.line(surf, (52, 52, 62), (sx + 11, sy + 9), (sx + 13, sy + 9), 1)
-        pygame.draw.line(surf, (52, 52, 62), (sx + 4,  sy + 9), (sx + 2,  sy + 8), 1)
-        pygame.draw.line(surf, (52, 52, 62), (sx + 20, sy + 9), (sx + 22, sy + 8), 1)
-
-        # ── 眼睛 ─────────────────────────────────────────────────────────
-        pygame.draw.circle(surf, (58, 44, 30), (sx + 8,  sy + 9), 1)
-        pygame.draw.circle(surf, (58, 44, 30), (sx + 17, sy + 9), 1)
-
-        # ── 咖啡因光暈 ───────────────────────────────────────────────────
+        # ── Coffee boost glow above head ─────────────────────────────────
         if self.coffee_level > 0:
-            r = 3 + (pygame.time.get_ticks() // 220) % 3
-            pygame.draw.circle(surf, (255, 252, 158), (sx + 12, sy - 4), r, 1)
-
-        # ── 喝咖啡動畫 ───────────────────────────────────────────────────
-        if self.coffee_drink_t > 0:
-            ct = self.coffee_drink_t
-            if ct > 2.0:
-                cup_x = sx + 22
-                cup_y = sy + 21
-            elif ct > 1.0:
-                prog = (2.0 - ct)           # 0 → 1
-                cup_x = sx + 22 - int(prog * 8)
-                cup_y = sy + 21 - int(prog * 15)
-            else:
-                cup_x = sx + 14
-                cup_y = sy + 6
-
-            # 杯身（白色紙杯）
-            pygame.draw.rect(surf, (245, 245, 245), pygame.Rect(cup_x,     cup_y,      12, 14))
-            # 咖啡液體
-            pygame.draw.rect(surf, (112, 62, 28),   pygame.Rect(cup_x + 1, cup_y + 2,  10, 11))
-            # 杯口邊緣
-            pygame.draw.rect(surf, (208, 208, 208), pygame.Rect(cup_x - 1, cup_y,      14,  3))
-            # 紙套（星巴克深綠）
-            pygame.draw.rect(surf, (0, 88, 55),     pygame.Rect(cup_x,     cup_y + 5,  12,  6))
-            # 把手
-            pygame.draw.arc(surf, (208, 208, 208),
-                            pygame.Rect(cup_x + 10, cup_y + 3, 8, 8),
-                            -math.pi / 2, math.pi / 2, 2)
-            # 熱氣（Phase 3：杯在嘴邊）
-            if ct < 1.0:
-                t_ms = pygame.time.get_ticks()
-                for i in range(3):
-                    wx = cup_x + 2 + i * 4 + int(math.sin((t_ms / 200.0) + i * 1.5) * 1.5)
-                    wy = cup_y - 4 - (t_ms // 220 + i) % 5
-                    pygame.draw.arc(surf, (200, 200, 200),
-                                    pygame.Rect(wx, wy, 4, 5), 0, math.pi, 1)
+            t = pygame.time.get_ticks()
+            glow_r = 4 + (t // 200) % 3
+            glow = pygame.Surface((glow_r * 2 + 4, glow_r * 2 + 4),
+                                  pygame.SRCALPHA)
+            pygame.draw.circle(glow, (255, 220, 110, 130),
+                               (glow_r + 2, glow_r + 2), glow_r)
+            surf.blit(glow, (sx + 16 - glow_r - 2, sy - 6 - glow_r))
+            pygame.draw.circle(surf, (255, 245, 180),
+                               (sx + 16, sy - 4), 2)
 
 
 class NPC:
